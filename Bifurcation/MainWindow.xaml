@@ -1,0 +1,65 @@
+﻿<Window x:Class="Bifurcation.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Bifurcation"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="640" Width="1000"
+        Loaded="Window_Loaded"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp">
+    <Grid x:Name="windowContent">
+        <Grid Margin="5,10,5,5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="10*"/>
+                <ColumnDefinition Width="4*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel x:Name="paramPanel" HorizontalAlignment="Stretch">
+                <TextBlock Text="Parameters" Margin="0,0,0,5" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <Grid Grid.Column="1" Margin="5,0,5,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="17"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="filter size = "/>
+                    <TextBox x:Name="textBox_filterSize" TextWrapping="Wrap" Width="40" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" TextChanged="Psize_TextChanged"/>
+                </StackPanel>
+                <Grid x:Name="matrixPanel" Grid.Row="1" Margin="5,5,5,0">
+                </Grid>
+            </Grid>
+
+            <StackPanel x:Name="outputPanel" HorizontalAlignment="Stretch" Grid.Column="2" Margin="5,5,5,5">
+                <TextBlock x:Name="textBlock_Khi" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_n_cap" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_K_cap" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_u0" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_u" Margin="0,5,0,5"/>
+                <Button Content="Clear log" Click="ClearLog_Click"/>
+                <ListBox x:Name="log" MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Hidden"/>
+            </StackPanel>
+            <Grid Margin="5,0,5,0" VerticalAlignment="Stretch" Grid.ColumnSpan="3" Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="10*"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="drawButton" Content="Draw" VerticalAlignment="Center" Margin="5,5,5,5" Padding="8,8,8,8" Click="drawButton_ClickAsync" HorizontalAlignment="Center"/>
+
+                <Image x:Name="graphImage" Grid.Column="1" MouseMove="graphImage_MouseMove" MouseLeftButtonDown="graphImage_MouseLeftButtonDown"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,10,0,10"/>
+                <ProgressBar x:Name="calcBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,65,10,0" Maximum="1" Orientation="Horizontal"/>
+                <ProgressBar x:Name="drawBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,95,10,0" Maximum="1" Orientation="Horizontal"/>
+            </Grid>
+        </Grid>
+        <Canvas x:Name="scopeCanvas" Width="50" Height="50" Margin="200,300,0,0" Background="White" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Hidden">
+            <Image x:Name="scopeImage" Stretch="Fill"/>
+        </Canvas>
+    </Grid>
+</Window>

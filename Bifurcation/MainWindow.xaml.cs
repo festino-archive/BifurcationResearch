@@ -23,7 +23,6 @@ namespace Bifurcation
         private Filter filter;
         private Solver curSolver;
         private Visualization vis;
-        private WriteableBitmap bmp;
 
         private CancellationTokenSource solveCancellation = null;
 
@@ -51,6 +50,42 @@ namespace Bifurcation
             filter = new Filter(matrixPanel);
             filter.Set(P);
             textBox_filterSize.Text = filter.Size.ToString();
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateVisSizes();
+        }
+
+        private void UpdateVisSizes()
+        {
+            if (graphImage?.Source == null || profileImage?.Source == null)
+                return;
+            double margin = graphImage.Margin.Right + profileImage.Margin.Left;
+            double width = visContainer.ActualWidth - margin; // max sum
+            double height = visContainer.ActualHeight; // max
+            double h = graphImage.Source.Height;
+            double w1 = graphImage.Source.Width;
+            double w2 = profileImage.Source.Width * h / profileImage.Source.Height;
+            double w = w1 + w2;
+
+            double actualRatio = width / height;
+            double ratio = w / h;
+            double wRes, hRes;
+            if (ratio < actualRatio)
+            {
+                hRes = height;
+                wRes = height * ratio;
+            }
+            else
+            {
+                wRes = width;
+                hRes = width / ratio;
+            }
+
+            graphImage.Height = profileImage.Height = hRes;
+            graphImage.Width = wRes * w1 / w;
+            profileImage.Width = wRes * w2 / w;
         }
 
         private void graphImage_MouseMove(object sender, MouseEventArgs e)
@@ -90,25 +125,7 @@ namespace Bifurcation
         private void DrawScope(Point windowPoint, Point picturePoint)
         {
             int SCOPE_RADIUS = 10;
-            int pixelSize = (1 + 2 * SCOPE_RADIUS);
             int size = 300;
-            scopeCanvas.Margin = new Thickness(windowPoint.X - size / 2, windowPoint.Y - size - 5, 0, 0);
-            scopeCanvas.Width = size;
-            scopeCanvas.Height = size;
-
-            /*WriteableBitmap scopeBmp = new WriteableBitmap(pixelSize, pixelSize, 96, 96, PixelFormats.Bgr32, null);
-            int origWidth = (int)bmp.Width;
-            int origHeight = (int)bmp.Height;
-            int leftPoint = Math.Clamp((int)(picturePoint.X - SCOPE_RADIUS), 0, origWidth);
-            int topPoint = Math.Clamp((int)(picturePoint.Y - SCOPE_RADIUS), 0, origHeight);
-            int rightPoint = Math.Clamp((int)(picturePoint.X + SCOPE_RADIUS + 1), 0, origWidth);
-            int bottomPoint = Math.Clamp((int)(picturePoint.Y + SCOPE_RADIUS + 1), 0, origHeight);
-            int width = rightPoint - leftPoint;
-            int height = bottomPoint - topPoint;
-            int leftOffset = Math.Clamp(leftPoint + SCOPE_RADIUS - (int)picturePoint.X, 0, width);
-            int topOffset = Math.Clamp(topPoint + SCOPE_RADIUS - (int)picturePoint.Y, 0, height);
-            Int32Rect scope = new Int32Rect(leftPoint, topPoint, width, height);
-            bmp.CopyPixelsTo(scope, scopeBmp, new Int32Rect(leftOffset, topOffset, width, height));*/
             int maxT = curSolver.TSize;
             int maxX = curSolver.XSize;
             double widthRatio = maxT / graphImage.ActualWidth;
@@ -117,15 +134,16 @@ namespace Bifurcation
             int jRadius = (int)(SCOPE_RADIUS * heightRatio);
             int kCursor = (int)(picturePoint.X * widthRatio);
             int jCursor = (int)(picturePoint.Y * heightRatio);
-            byte[] imageArr = vis.DrawScope(kCursor, jCursor, kRadius, jRadius);
-            int kSize = 2 * kRadius + 1;
-            int jSize = 2 * jRadius + 1;
-            WriteableBitmap scopeBmp = new WriteableBitmap(kSize, jSize, 96, 96, PixelFormats.Bgr32, null);
-            scopeBmp.WritePixels(new Int32Rect(0, 0, kSize, jSize), imageArr, vis.ScopeStride, 0, 0);
+            WriteableBitmapData image = vis.DrawScope(kCursor, jCursor, kRadius, jRadius);
+            WriteableBitmap scopeBmp = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgr32, null);
+            scopeBmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);
             scopeImage.Source = scopeBmp;
             scopeImage.Width = size;
             scopeImage.Height = size;
 
+            scopeCanvas.Margin = new Thickness(windowPoint.X - size / 2, windowPoint.Y - size - 5, 0, 0);
+            scopeCanvas.Width = size;
+            scopeCanvas.Height = size;
             if (scopeCanvas.Visibility != Visibility.Visible)
                 scopeCanvas.Visibility = Visibility.Visible;
         }
@@ -229,12 +247,17 @@ namespace Bifurcation
             var drawProgress = new Progress<double>(value => drawBar.Value = value);
             AsyncArg asyncArg = new AsyncArg(calcProgress, drawProgress, solveCancellation.Token);
 
-            byte[] imageArr = await Task.Run(() => vis.Draw(asyncArg));
+            WriteableBitmapData image = await Task.Run(() => vis.Draw(asyncArg));
             if (asyncArg.token.IsCancellationRequested)
                 return;
-            bmp = new WriteableBitmap(vis.Width, vis.Height, 96, 96, PixelFormats.Bgr32, null);
-            bmp.WritePixels(vis.ImageDimentions, imageArr, vis.NStride, 0, 0);
+            WriteableBitmap bmp = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgr32, null);
+            bmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);
             graphImage.Source = bmp;
+
+            image = vis.DrawProfile(200, 500);
+            WriteableBitmap profileBmp = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgr32, null);
+            profileBmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);
+            profileImage.Source = profileBmp;
 
             textBlock_Khi.Text = "𝜒 = " + newSolver.Chi.ToString("f4");
             int n_cap = filter.FindDiagCriticalN(newSolver.D, 1, newSolver.K);
@@ -242,6 +265,7 @@ namespace Bifurcation
             textBlock_K_cap.Text = $"K^({n_cap}) = " + filter.FindDiagCritical(newSolver.D, 1, n_cap);
             curSolver = newSolver;
 
+            UpdateVisSizes();
             SwitchDrawButton(false);
         }
 

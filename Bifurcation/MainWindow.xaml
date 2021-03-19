@@ -7,11 +7,12 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="640" Width="1000"
         Loaded="Window_Loaded"
+        SizeChanged="Window_SizeChanged"
         MouseLeftButtonUp="Window_MouseLeftButtonUp">
     <Grid x:Name="windowContent">
         <Grid Margin="5,10,5,5">
             <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
                 <RowDefinition Height="1*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -52,10 +53,19 @@
                     <ColumnDefinition Width="10*"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="drawButton" Content="Draw" VerticalAlignment="Center" Margin="5,5,5,5" Padding="8,8,8,8" Click="drawButton_ClickAsync" HorizontalAlignment="Center"/>
-
-                <Image x:Name="graphImage" Grid.Column="1" MouseMove="graphImage_MouseMove" MouseLeftButtonDown="graphImage_MouseLeftButtonDown"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,10,0,10"/>
                 <ProgressBar x:Name="calcBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,65,10,0" Maximum="1" Orientation="Horizontal"/>
                 <ProgressBar x:Name="drawBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,95,10,0" Maximum="1" Orientation="Horizontal"/>
+
+                <Grid x:Name="visContainer" Margin="10,10,50,10" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Image x:Name="graphImage" HorizontalAlignment="Left" VerticalAlignment="Center" MouseMove="graphImage_MouseMove" MouseLeftButtonDown="graphImage_MouseLeftButtonDown"/>
+
+                    <Image x:Name="profileImage" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
             </Grid>
         </Grid>
         <Canvas x:Name="scopeCanvas" Width="50" Height="50" Margin="200,300,0,0" Background="White" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Hidden">

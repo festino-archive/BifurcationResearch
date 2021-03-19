@@ -19,16 +19,22 @@ namespace Bifurcation
             return text;
         }
 
-        // almost https://stackoverflow.com/a/3983115
         public static Complex ParseComplex(string number)
         {
             number = number.Replace(" ", "");
             int index = SelectDouble(number);
             double real, img = 0, d;
             string s = number.Substring(0, index);
+
+            bool imgDefined = index < number.Length && number[index] == 'i';
+            if (s == "")
+                if (imgDefined)
+                    s = "1";
+                else
+                    s = "0";
+
             if (!double.TryParse(s, out real))
                 throw new Exception("\"" + s + "\" (\"" + number + "\")");
-            bool imgDefined = index < number.Length && number[index] == 'i';
             if (imgDefined)
             {
                 index++;
@@ -43,6 +49,9 @@ namespace Bifurcation
                 if (!imgDefined)
                     lastIndex--;
                 s = number.Substring(index, lastIndex - index);
+                if (!imgDefined && s == "")
+                    s = "1";
+
                 if (!double.TryParse(s, out d))
                     throw new Exception("\"" + s + "\" (\"" + number + "\")");
                 if (imgDefined)

@@ -1,13 +1,20 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using static Bifurcation.Utils;
 
 namespace Bifurcation
 {
     class Filter
     {
+        public readonly Brush COLOR_VALUE = new SolidColorBrush(Color.FromRgb(235, 255, 235));
+        public readonly Brush COLOR_EMPTY = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        public readonly Brush COLOR_ERROR = new SolidColorBrush(Color.FromRgb(255, 230, 230));
+
         private Grid matrixPanel;
+        private TextBox[,] cells;
         private Complex[,] P;
 
         public int Size { get; private set; }
@@ -21,17 +28,9 @@ namespace Bifurcation
         {
             int fullSize = matrixPanel.ColumnDefinitions.Count - 1;
             P = new Complex[fullSize, fullSize];
-            foreach (UIElement elem in matrixPanel.Children)
-            {
-                int i = Grid.GetRow(elem) - 1;
-                int j = Grid.GetColumn(elem) - 1;
-                if (elem is TextBox
-                        && 0 <= i && i < fullSize
-                        && 0 <= j && j < fullSize)
-                {
-                    P[i, j] = ComplexUtils.ParseComplex(((TextBox)elem).Text);
-                }
-            }
+            for (int i = 0; i < fullSize; i++)
+                for (int j = 0; j < fullSize; j++)
+                    P[i, j] = ComplexUtils.ParseComplex(cells[i, j].Text);
             return P;
         }
 
@@ -60,13 +59,21 @@ namespace Bifurcation
 
         public void Update(int size)
         {
-            Size = size;
+            int oldFullSize = 2 * Size + 1;
+            if (cells != null)
+                for (int i = 0; i < oldFullSize; i++)
+                    for (int j = 0; j < oldFullSize; j++)
+                        cells[i, j].TextChanged -= Cell_TextChanged;
             matrixPanel.Children.Clear();
             matrixPanel.ColumnDefinitions.Clear();
             matrixPanel.RowDefinitions.Clear();
+            Size = size;
+            int fullSize = 2 * Size + 1;
+            P = new Complex[fullSize, fullSize];
+            cells = new TextBox[fullSize, fullSize];
+
             matrixPanel.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Auto) });
             matrixPanel.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Auto) });
-            int fullSize = 2 * Size + 1;
             for (int i = 0; i < fullSize; i++)
             {
                 matrixPanel.ColumnDefinitions.Add(ColumnStarDefinition(1));
@@ -90,15 +97,20 @@ namespace Bifurcation
                 Grid.SetColumn(columnNum, i + 1);
                 matrixPanel.Children.Add(columnNum);
             }
+
             for (int i = 1; i <= fullSize; i++)
                 for (int j = 1; j <= fullSize; j++)
                 {
-                    TextBox elem = new TextBox() { Text = "0" };
+                    TextBox elem = new TextBox() {
+                        Text = "0",
+                        Background = COLOR_EMPTY
+                    };
+                    elem.TextChanged += Cell_TextChanged;
                     Grid.SetRow(elem, i);
                     Grid.SetColumn(elem, j);
                     matrixPanel.Children.Add(elem);
+                    cells[i - 1, j - 1] = elem;
                 }
-            P = new Complex[fullSize, fullSize];
         }
 
         public int FindDiagCriticalN(double D, double A0, double K)
@@ -159,6 +171,29 @@ namespace Bifurcation
                 else
                     return double.PositiveInfinity;
             return (1 + D * n_cap * n_cap) / divider;
+        }
+
+        private void Cell_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox textBox = (TextBox)sender;
+            string text = textBox.Text;
+            if (text == "" || text == "0")
+            {
+                textBox.Background = COLOR_EMPTY;
+                return;
+            }
+            try
+            {
+                Complex parsed = ComplexUtils.ParseComplex(text);
+                if (parsed == 0)
+                    textBox.Background = COLOR_EMPTY;
+                else
+                    textBox.Background = COLOR_VALUE;
+            }
+            catch
+            {
+                textBox.Background = COLOR_ERROR;
+            }
         }
     }
 }

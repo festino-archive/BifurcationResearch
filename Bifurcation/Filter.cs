@@ -1,126 +1,149 @@
 ﻿using System;
 using System.Numerics;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using static Bifurcation.Utils;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 
 namespace Bifurcation
 {
     class Filter
     {
-        public readonly Brush COLOR_VALUE = new SolidColorBrush(Color.FromRgb(235, 255, 235));
-        public readonly Brush COLOR_EMPTY = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
-        public readonly Brush COLOR_ERROR = new SolidColorBrush(Color.FromRgb(255, 230, 230));
-
-        private Grid matrixPanel;
-        private TextBox[,] cells;
         private Complex[,] P;
-
         public int Size { get; private set; }
+        public int FullSize { get; private set; }
+        public bool IsDiagonal { get; private set; }
+        private int NonDiagonalCount;
 
-        public Filter(Grid matrixPanel)
-        {
-            this.matrixPanel = matrixPanel;
-        }
+        private Complex[] alphas = null;
+        private Complex[] betas = null;
+        private Complex[,] gammas = null;
 
-        public Complex[,] GetFromGrid()
+        public Filter(int size)
         {
-            int fullSize = cells.GetLength(0);
-            P = new Complex[fullSize, fullSize];
-            for (int i = 0; i < fullSize; i++)
-                for (int j = 0; j < fullSize; j++)
-                    P[i, j] = ComplexUtils.Parse(cells[i, j].Text);
-            return P;
-        }
-
-        public Complex[,] GetCached()
-        {
-            return P;
-        }
-
-        public void Set(Complex[,] P)
-        {
-            int fullSize = P.GetLength(0);
-            Update((fullSize - 1) / 2);
-            foreach (UIElement elem in matrixPanel.Children)
-            {
-                int i = Grid.GetRow(elem) - 1;
-                int j = Grid.GetColumn(elem) - 1;
-                if (elem is TextBox
-                        && 0 <= i && i < fullSize
-                        && 0 <= j && j < fullSize)
-                {
-                    ((TextBox)elem).Text = ComplexUtils.ToNiceString(P[i, j]);
-                }
-            }
-            this.P = P;
-        }
-
-        public void Update(int size)
-        {
-            int oldFullSize = 2 * Size + 1;
-            if (cells != null)
-                for (int i = 0; i < oldFullSize; i++)
-                    for (int j = 0; j < oldFullSize; j++)
-                        cells[i, j].TextChanged -= Cell_TextChanged;
-            matrixPanel.Children.Clear();
-            matrixPanel.ColumnDefinitions.Clear();
-            matrixPanel.RowDefinitions.Clear();
             Size = size;
-            int fullSize = 2 * Size + 1;
-            P = new Complex[fullSize, fullSize];
-            cells = new TextBox[fullSize, fullSize];
-
-            matrixPanel.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Auto) });
-            matrixPanel.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(1, GridUnitType.Auto) });
-            for (int i = 0; i < fullSize; i++)
-            {
-                matrixPanel.ColumnDefinitions.Add(ColumnStarDefinition(1));
-                matrixPanel.RowDefinitions.Add(RowStarDefinition(1));
-                string value = (i - Size).ToString();
-                TextBlock rowNum = new TextBlock()
-                {
-                    Text = value,
-                    Margin = new Thickness(0, 0, 5, 0),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Right
-                };
-                Grid.SetRow(rowNum, i + 1);
-                matrixPanel.Children.Add(rowNum);
-                TextBlock columnNum = new TextBlock()
-                {
-                    Text = value,
-                    Margin = new Thickness(0, 0, 0, 5),
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-                Grid.SetColumn(columnNum, i + 1);
-                matrixPanel.Children.Add(columnNum);
-            }
-
-            for (int i = 1; i <= fullSize; i++)
-                for (int j = 1; j <= fullSize; j++)
-                {
-                    TextBox elem = new TextBox() {
-                        Text = "0",
-                        Background = COLOR_EMPTY
-                    };
-                    elem.TextChanged += Cell_TextChanged;
-                    Grid.SetRow(elem, i);
-                    Grid.SetColumn(elem, j);
-                    matrixPanel.Children.Add(elem);
-                    cells[i - 1, j - 1] = elem;
-                }
+            FullSize = (Size + 1) * 2;
+            P = new Complex[FullSize, FullSize];
+            NonDiagonalCount = 0;
+            IsDiagonal = NonDiagonalCount == 0;
         }
 
-        public bool IsDiagonal()
+        public Filter(Complex[,] P)
         {
-            int fullSize = 2 * Size + 1;
-            for (int i = 0; i < fullSize; i++)
-                for (int j = 0; j < fullSize; j++)
-                    if (i != j && P[i, j] != 0)
-                        return false;
-            return true;
+            if (P.GetLength(0) != P.GetLength(1))
+                throw new Exception("non-square matrix P");
+            this.P = (Complex[,])P.Clone();
+            FullSize = P.GetLength(0);
+            Size = (FullSize - 1) / 2;
+            NonDiagonalCount = NonDiagonalElements(P);
+            IsDiagonal = NonDiagonalCount == 0;
+        }
+
+        public Complex this[int i, int j]
+        {
+            get => P[i, j];
+            set
+            {
+                if (i != j)
+                {
+                    if (P[i, j] == 0 && value != 0)
+                        NonDiagonalCount++;
+                    else if (P[i, j] != 0 && value == 0)
+                        NonDiagonalCount--;
+                    IsDiagonal = NonDiagonalCount == 0;
+                }
+                P[i, j] = value;
+            }
+        }
+
+        private void CalcABG()
+        {
+            if (alphas != null)
+                return;
+            int fullSize = FullSize;
+            int N = Size;
+            alphas = new Complex[fullSize];
+            betas = new Complex[fullSize];
+            gammas = new Complex[fullSize, fullSize];
+            Complex rho = ComplexUtils.GetQ(P[N, N]);
+            Complex rho_c = ComplexUtils.GetConjugateQ(P[N, N]);
+            for (int m = -N; m <= N; m++)
+            {
+                int M = N + m;
+                int nM = N - m;
+                alphas[M] = rho_c * ComplexUtils.GetQ(P[M, M]) - rho * ComplexUtils.GetConjugateQ(P[nM, nM]);
+                betas[M] = rho_c * P[nM, M] - rho * ComplexUtils.GetConjugate(P[M, nM]);
+                for (int k = -N; k <= N; k++)
+                {
+                    if (k == m || k == -m)
+                        continue;
+                    int K = N + k;
+                    int nK = N - k;
+                    gammas[M, K] = rho_c * P[M, K] - rho * ComplexUtils.GetConjugate(P[nM, nK]);
+                }
+            }
+        }
+
+        public Tuple<Complex[], Complex[,]> GetEigenValues(ModelParams p)
+        {
+            CalcABG();
+            int fullSize = FullSize;
+            int N = Size;
+            Complex[,] system = new Complex[fullSize, fullSize];
+            for (int m = -N; m <= N; m++)
+            {
+                int M = N + m;
+                int nM = N - m;
+                Complex delta = new Complex(0, p.K * p.A0m2);
+                system[M, M] += -(1 + p.D * m * m) + delta * alphas[M];
+                system[M, nM] += delta * betas[nM];
+                for (int k = -N; k <= N; k++)
+                {
+                    if (k == m || k == -m)
+                        continue;
+                    int K = N + k;
+                    system[M, K] += delta * gammas[M, K];
+                }
+            }
+            Matrix<Complex> mathSystem = Matrix<Complex>.Build.DenseOfArray(system);
+            Evd<Complex> eigen = mathSystem.Evd();
+            Complex[] values = eigen.EigenValues.ToArray();
+            Complex[,] vectors = eigen.EigenVectors.ToArray();
+            for (int n = 0; n < fullSize; n++)
+            {
+                double length2 = 0;
+                for (int m = 0; m < fullSize; m++)
+                    length2 += vectors[m, n].Magnitude * vectors[m, n].Magnitude;
+                double norm = 1 / Math.Sqrt(length2);
+                for (int m = 0; m < fullSize; m++)
+                    vectors[m, n] *= norm;
+            }
+            return Tuple.Create(values, vectors);
+        }
+
+        public Complex GetDerivative(int eigen, ModelParams p)
+        {
+            int fullSize = FullSize;
+            int N = Size;
+            if (eigen < -N || eigen > N)
+                return 0;
+            var eigenVal = GetEigenValues(p);
+            Complex der = 0;
+            for (int m = -N; m <= N; m++)
+            {
+                int M = N + m;
+                int nM = N - m;
+                der += alphas[M] * eigenVal.Item2[M, eigen];
+                der += betas[nM] * eigenVal.Item2[nM, eigen];
+                for (int k = -N; k <= N; k++)
+                {
+                    if (k == m || k == -m)
+                        continue;
+                    int K = N + k;
+                    der += gammas[M, K] * eigenVal.Item2[K, eigen];
+                }
+            }
+            der /= fullSize;
+            der *= p.A0m2;
+            return der;
         }
 
         public int FindDiagCriticalN(double D, double A0, double K)
@@ -183,27 +206,14 @@ namespace Bifurcation
             return (1 + D * n_cap * n_cap) / divider;
         }
 
-        private void Cell_TextChanged(object sender, TextChangedEventArgs e)
+        private int NonDiagonalElements(Complex[,] P)
         {
-            TextBox textBox = (TextBox)sender;
-            string text = textBox.Text;
-            if (text == "" || text == "0")
-            {
-                textBox.Background = COLOR_EMPTY;
-                return;
-            }
-            try
-            {
-                Complex parsed = ComplexUtils.Parse(text);
-                if (parsed == 0)
-                    textBox.Background = COLOR_EMPTY;
-                else
-                    textBox.Background = COLOR_VALUE;
-            }
-            catch
-            {
-                textBox.Background = COLOR_ERROR;
-            }
+            int count = 0;
+            for (int i = 0; i < FullSize; i++)
+                for (int j = 0; j < FullSize; j++)
+                    if (i != j && P[i, j] != 0)
+                        count++;
+            return count;
         }
     }
 }

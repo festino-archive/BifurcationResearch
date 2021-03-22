@@ -20,7 +20,7 @@ namespace Bifurcation
     {
         private static readonly double PARAMNAME_WIDTH = 40;
         private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0;
-        private Filter filter;
+        private FilterGrid filterGrid;
         private Solver curSolver;
         private Visualization vis;
         private TextBlock[] Tvalues;
@@ -51,9 +51,9 @@ namespace Bifurcation
             P[10, 10] = new Complex(0.6, 0.3);
             P[2, 2] = new Complex(0.4, -0.159);
             P[8, 8] = new Complex(-0.4, -0.159);
-            filter = new Filter(matrixPanel);
-            filter.Set(P);
-            textBox_filterSize.Text = filter.Size.ToString();
+            filterGrid = new FilterGrid(matrixPanel);
+            filterGrid.Set(P);
+            textBox_filterSize.Text = filterGrid.Size.ToString();
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -227,11 +227,14 @@ namespace Bifurcation
                 return;
             }
 
+            Filter P = filterGrid.Filter;
+
+            Solver newSolver;
             string errorElem = "";
             double chi = 0;
-            Solver newSolver;
             try
             {
+                int n = filterGrid.Size;
                 errorElem = "D";
                 double D = double.Parse(input_D.Text);
                 errorElem = "A0";
@@ -244,10 +247,6 @@ namespace Bifurcation
                 int M = int.Parse(input_M.Text);
                 errorElem = "N";
                 int N = int.Parse(input_N.Text);
-
-                errorElem = "P";
-                Complex[,] P = filter.GetFromGrid();
-                int n = filter.Size;
 
                 errorElem = "u0";
                 ExprParser parser = new ExprParser();
@@ -274,7 +273,8 @@ namespace Bifurcation
 
                 errorElem = "solver";
                 newSolver = new Solver(P, T, N, M);
-                newSolver.SetParams(A0, K, u0, D);
+                ModelParams param = new ModelParams(A0, K, u0, D);
+                newSolver.SetParams(param);
             }
             catch(Exception ex)
             {
@@ -304,76 +304,8 @@ namespace Bifurcation
             profileImage.Source = profileBmp;
 
             curSolver = newSolver;
-
-            var eigen = curSolver.GetEigenValues();
-            Logger.Write("eigenvalues:");
-            Logger.Write(eigen.Item1);
-            Logger.Write("eigenvectors: (columns)");
-            Logger.Write(eigen.Item2);
-
             textBlock_Khi.Text = "𝜒 = " + newSolver.Chi.ToString("f4");
-            if (filter.IsDiagonal())
-            {
-                int n_cap = filter.FindDiagCriticalN(newSolver.D, 1, newSolver.K);
-                textBlock_K_cap.Text = $"K^({n_cap}) = " + filter.FindDiagCritical(newSolver.D, 1, n_cap);
-                textBlock_n_cap.Text = "n^ = " + n_cap;
-                textBlock_n_cap_vec.Text = "";
-            }
-            else
-            {
-                textBlock_K_cap.Text = "Filter is not diagonal";
-                int count = 0;
-                int[] n_cap = new int[eigen.Item1.Length];
-                bool multi = false;
-                Complex value = 0;
-                for (int n = 0; n < eigen.Item1.Length; n++)
-                {
-                    Complex v = eigen.Item1[n];
-                    if (v.Real > -0.001)
-                    {
-                        if (Math.Abs(value.Imaginary - v.Imaginary) >= 0.001)
-                            multi = true;
-                        n_cap[count] = n;
-                        count++;
-                        value = v;
-                    }
-                }
-                if (count == 0)
-                    textBlock_n_cap.Text = "No n^";
-                else if (multi)
-                    textBlock_n_cap.Text = "Multi n^";
-                else
-                {
-                    string text = "λn^ = " + value.ToString("f3") + " (multiplicity=" + count;
-                    if (count == 1)
-                        text += ", derivative=" + curSolver.GetDerivative(n_cap[0]) + ")";
-                    else
-                    {
-                        text += ")\nderivatives:[";
-                        for (int i = 0; i < count; i++)
-                        {
-                            if (i > 0)
-                                text += ", ";
-                            text += curSolver.GetDerivative(n_cap[i]);
-                        }
-                        text += "]";
-                    }
-                    textBlock_n_cap.Text = text;
-                    string vec = "";
-                    for (int n = 0; n < count; n++)
-                    {
-                        if (n > 0)
-                            vec += "\n";
-                        for (int i = 0; i < eigen.Item1.Length; i++)
-                        {
-                            if (i > 0)
-                                vec += ", ";
-                            vec += eigen.Item2[i, n_cap[n]].ToString("f2");
-                        }
-                        textBlock_n_cap_vec.Text = "e = " + vec;
-                    }
-                }
-            }
+            filterGrid.UpdateEigen(textBlock_critical, curSolver.Parameters);
 
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
@@ -409,9 +341,9 @@ namespace Bifurcation
             int res;
             if (!int.TryParse(textBox.Text, out res))
                 return;
-            if (res == filter.Size || res > 20)
+            if (res == filterGrid.Size || res > 20)
                 return;
-            filter.Update(res);
+            filterGrid.Update(res);
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Factorization;
 using MathNet.Numerics.IntegralTransforms;
 
 namespace Bifurcation
@@ -11,27 +9,27 @@ namespace Bifurcation
 
         // change if param was changed
         private bool Solved { get; set; }
-        private Complex[] alphas = null;
-        private Complex[] betas = null;
-        private Complex[,] gammas = null;
 
+        public ModelParams Parameters;
         public Complex A0;
-        public double D, T, K, A0m2;
+        public double D, K, A0m2;
         int N, M;
         double[] u0;
+        public double T;
         double xStep, tStep;
-        Complex[,] P;
+        Filter P;
+        public int FilterFullSize { get; private set; }
+        public int FilterSize { get; private set; }
         public double Chi { get; private set; }
         public double[,] Solution { get; private set; }
         public int TSize { get => M; }
         public int XSize { get => N; }
 
-        public Solver(Complex[,] P, double T, int xCount = 200, int timeCount = 1000)
+        public Solver(Filter P, double T, int xCount = 200, int timeCount = 1000)
         {
-            if (P.GetLength(0) == P.GetLength(1))
-                this.P = P;
-            else
-                throw new Exception("non-square matrix P");
+            this.P = P;
+            FilterFullSize = P.FullSize;
+            FilterSize = P.Size;
             N = xCount;
             M = timeCount;
             this.T = T;
@@ -43,13 +41,14 @@ namespace Bifurcation
             }
         }
 
-        public void SetParams(Complex A0, double K, double[] u0, double D = 0.01)
+        public void SetParams(ModelParams p)
         {
-            this.A0 = A0;
-            A0m2 = A0.Magnitude * A0.Magnitude;
-            this.D = D;
-            this.K = K;
-            this.u0 = u0;
+            Parameters = p;
+            K = p.K;
+            A0 = p.A0;
+            A0m2 = p.A0m2;
+            D = p.D;
+            u0 = p.u0;
         }
 
         public static double GetChi(double K, Complex pho00, Complex A0)
@@ -68,8 +67,8 @@ namespace Bifurcation
                 return;
             Solved = true;
 
-            int P_size = P.GetLength(0);
-            int P_max = (P_size - 1) / 2;
+            int P_size = FilterFullSize;
+            int P_max = FilterSize;
             Chi = GetChi(K, P[P_max, P_max], A0);
 
             Solution = new double[M, N];
@@ -107,9 +106,7 @@ namespace Bifurcation
                 for (int j = 0; j < N; j++)
                     FFT[j] = norm * FFT[j];
 
-                //if (k == 0)
-                //    Logger.Write(FFT);
-
+                // TODO optimize for almost empty matrices
                 for (int m = 0; m < N; m++)
                 {
                     for (int l = 0; l < P_size; l++)
@@ -130,8 +127,6 @@ namespace Bifurcation
                 {
                     iFT[j] = filtered[j].Magnitude;
                 }
-                //if (k == 0)
-                //    Logger.Write(filtered);
 
                 for (int j = 0; j < N; j++)
                 {
@@ -149,89 +144,6 @@ namespace Bifurcation
 
                 asyncArg.calcProgress?.Report((k + 1) / kMax);
             }
-        }
-
-        private void CalcABG()
-        {
-            if (alphas != null)
-                return;
-            int fullSize = P.GetLength(0);
-            int N = (fullSize - 1) / 2;
-            alphas = new Complex[fullSize];
-            betas = new Complex[fullSize];
-            gammas = new Complex[fullSize, fullSize];
-            Complex rho = ComplexUtils.GetQ(P[N, N]);
-            Complex rho_c = ComplexUtils.GetConjugateQ(P[N, N]);
-            for (int m = -N; m <= N; m++)
-            {
-                int M = N + m;
-                int nM = N - m;
-                alphas[M] = rho_c * ComplexUtils.GetQ(P[M, M]) - rho * ComplexUtils.GetConjugateQ(P[nM, nM]);
-                betas[M] = rho_c * P[nM, M] - rho * ComplexUtils.GetConjugate(P[M, nM]);
-                for (int k = -N; k <= N; k++)
-                {
-                    if (k == m || k == -m)
-                        continue;
-                    int K = N + k;
-                    int nK = N - k;
-                    gammas[M, K] = rho_c * P[M, K] - rho * ComplexUtils.GetConjugate(P[nM, nK]);
-                }
-            }
-        }
-
-        public Tuple<Complex[], Complex[,]> GetEigenValues()
-        {
-            CalcABG();
-            int fullSize = P.GetLength(0);
-            int N = (fullSize - 1) / 2;
-            Complex[,] system = new Complex[fullSize, fullSize];
-            for (int m = -N; m <= N; m++)
-            {
-                int M = N + m;
-                int nM = N - m;
-                Complex delta = new Complex(0, K * A0m2);
-                system[M, M] += -(1 + D * m * m) + delta * alphas[M];
-                system[M, nM] += delta * betas[nM];
-                for (int k = -N; k <= N; k++)
-                {
-                    if (k == m || k == -m)
-                        continue;
-                    int K = N + k;
-                    system[M, K] += delta * gammas[M, K];  
-                }
-            }
-            Matrix<Complex> mathSystem = Matrix<Complex>.Build.DenseOfArray(system);
-            Evd<Complex> eigen = mathSystem.Evd();
-            Complex[] values = eigen.EigenValues.ToArray();
-            Complex[,] vectors = eigen.EigenVectors.ToArray();
-            return Tuple.Create(values, vectors);
-        }
-
-        public Complex GetDerivative(int eigen)
-        {
-            int fullSize = P.GetLength(0);
-            int N = (fullSize - 1) / 2;
-            if (eigen < -N || eigen > N)
-                return 0;
-            var eigenVal = GetEigenValues();
-            Complex der = 0;
-            for (int m = -N; m <= N; m++)
-            {
-                int M = N + m;
-                int nM = N - m;
-                der += alphas[M] * eigenVal.Item2[M, eigen];
-                der += betas[nM] * eigenVal.Item2[nM, eigen];
-                for (int k = -N; k <= N; k++)
-                {
-                    if (k == m || k == -m)
-                        continue;
-                    int K = N + k;
-                    der += gammas[M, K] * eigenVal.Item2[K, eigen];
-                }
-            }
-            der /= fullSize;
-            der *= A0m2;
-            return der;
         }
 
         private static Complex e_k(int k, int N)

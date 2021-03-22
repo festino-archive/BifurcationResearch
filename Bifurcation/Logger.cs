@@ -30,12 +30,39 @@ namespace Bifurcation
 
         public static void Write(Array arr)
         {
+            if (arr == null)
+            {
+                Write("null Array");
+                return;
+            }
             foreach (object ob in arr)
                 Write(ob.ToString());
+        }
+        public static void Write(Complex[] arr)
+        {
+            if (arr == null)
+            {
+                Write("null Complex[]");
+                return;
+            }
+            string line = "";
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (i > 0)
+                    line += ", ";
+                line += toString(arr[i]);
+            }
+            Write(line);
         }
 
         public static void Write(Complex[,] arr)
         {
+            if (arr == null)
+            {
+                Write("null Complex[,]");
+                return;
+            }
+
             for (int i = 0; i < arr.GetLength(0); i++)
             {
                 string line = "";
@@ -46,10 +73,15 @@ namespace Bifurcation
                 {
                     if (j > 0)
                         line += ", ";
-                    line += "(" + arr[i, j].Real.ToString("f3") + "; " + arr[i, j].Imaginary.ToString("f3") + ")";
+                    line += toString(arr[i, j]);
                 }
                 Write(line);
             }
+        }
+
+        private static string toString(Complex z)
+        {
+            return "(" + z.Real.ToString("f3") + "; " + z.Imaginary.ToString("f3") + ")";
         }
 
         public static void Clear()

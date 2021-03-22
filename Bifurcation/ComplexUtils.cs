@@ -5,6 +5,19 @@ namespace Bifurcation
 {
     public static class ComplexUtils
     {
+        public static Complex GetConjugate(Complex z)
+        {
+            return new Complex(z.Real, -z.Imaginary);
+        }
+        public static Complex GetQ(Complex z)
+        {
+            return 1 + z;
+        }
+        public static Complex GetConjugateQ(Complex z)
+        {
+            return 1 + GetConjugate(z);
+        }
+
         public static string ToNiceString(Complex z)
         {
             double real = z.Real;
@@ -19,7 +32,7 @@ namespace Bifurcation
             return text;
         }
 
-        public static Complex ParseComplex(string number)
+        public static Complex Parse(string number)
         {
             number = number.Replace(" ", "");
             int index = SelectDouble(number);
@@ -49,8 +62,8 @@ namespace Bifurcation
                 if (!imgDefined)
                     lastIndex--;
                 s = number.Substring(index, lastIndex - index);
-                if (!imgDefined && s == "")
-                    s = "1";
+                if (!imgDefined && (s == "" || s == "+" || s == "-"))
+                    s = s + "1";
 
                 if (!double.TryParse(s, out d))
                     throw new Exception("\"" + s + "\" (\"" + number + "\")");
@@ -65,6 +78,8 @@ namespace Bifurcation
         private static int SelectDouble(string s)
         {
             int index = 0;
+            if (s.Length == 0)
+                return index;
             char c = s[index];
             if (c == '+' || c == '-')
                 c = s[++index];

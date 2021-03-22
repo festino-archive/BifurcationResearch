@@ -26,11 +26,11 @@ namespace Bifurcation
 
         public Complex[,] GetFromGrid()
         {
-            int fullSize = matrixPanel.ColumnDefinitions.Count - 1;
+            int fullSize = cells.GetLength(0);
             P = new Complex[fullSize, fullSize];
             for (int i = 0; i < fullSize; i++)
                 for (int j = 0; j < fullSize; j++)
-                    P[i, j] = ComplexUtils.ParseComplex(cells[i, j].Text);
+                    P[i, j] = ComplexUtils.Parse(cells[i, j].Text);
             return P;
         }
 
@@ -113,6 +113,16 @@ namespace Bifurcation
                 }
         }
 
+        public bool IsDiagonal()
+        {
+            int fullSize = 2 * Size + 1;
+            for (int i = 0; i < fullSize; i++)
+                for (int j = 0; j < fullSize; j++)
+                    if (i != j && P[i, j] != 0)
+                        return false;
+            return true;
+        }
+
         public int FindDiagCriticalN(double D, double A0, double K)
         {
             bool found = false;
@@ -184,7 +194,7 @@ namespace Bifurcation
             }
             try
             {
-                Complex parsed = ComplexUtils.ParseComplex(text);
+                Complex parsed = ComplexUtils.Parse(text);
                 if (parsed == 0)
                     textBox.Background = COLOR_EMPTY;
                 else

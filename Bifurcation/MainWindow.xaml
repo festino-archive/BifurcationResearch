@@ -39,10 +39,11 @@
             </Grid>
 
             <StackPanel x:Name="outputPanel" HorizontalAlignment="Stretch" Grid.Column="2" Margin="5,5,5,5">
-                <TextBlock x:Name="textBlock_Khi" Margin="0,5,0,5"/>
-                <TextBlock x:Name="textBlock_n_cap" Margin="0,5,0,5"/>
-                <TextBlock x:Name="textBlock_K_cap" Margin="0,5,0,5"/>
                 <TextBlock x:Name="textBlock_u0" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_Khi" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_K_cap" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_n_cap" Margin="0,5,0,5"/>
+                <TextBlock x:Name="textBlock_n_cap_vec" Margin="0,5,0,5"/>
                 <TextBlock x:Name="textBlock_u" Margin="0,5,0,5"/>
                 <Button Content="Clear log" Click="ClearLog_Click"/>
                 <ListBox x:Name="log" MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Hidden"/>
@@ -56,15 +57,21 @@
                 <ProgressBar x:Name="calcBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,65,10,0" Maximum="1" Orientation="Horizontal"/>
                 <ProgressBar x:Name="drawBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,95,10,0" Maximum="1" Orientation="Horizontal"/>
 
-                <Grid x:Name="visContainer" Margin="10,10,50,10" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Grid x:Name="visContainer" Margin="10,10,50,10" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Hidden">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <Image x:Name="graphImage" HorizontalAlignment="Left" VerticalAlignment="Center" MouseMove="graphImage_MouseMove" MouseLeftButtonDown="graphImage_MouseLeftButtonDown"/>
-
                     <Image x:Name="profileImage" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                    <TextBlock x:Name="Label_x0" Text="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Label_x2pi" Text="2π" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Label_px0" Text="0" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.ColumnSpan="2"/>
+                    <TextBlock x:Name="Label_px2pi" Text="2π" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.ColumnSpan="2"/>
+                    <TextBlock x:Name="Label_t0" Text="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Label_tT" Text="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
                 </Grid>
             </Grid>
         </Grid>

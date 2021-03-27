@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using MathNet.Numerics.IntegralTransforms;
 
 namespace Bifurcation
 {
@@ -67,7 +66,6 @@ namespace Bifurcation
                 return;
             Solved = true;
 
-            int P_size = FilterFullSize;
             int P_max = FilterSize;
             Chi = GetChi(K, P[P_max, P_max], A0);
 
@@ -92,36 +90,8 @@ namespace Bifurcation
                 if (asyncArg.token.IsCancellationRequested)
                     return;
 
-                Complex[] filtered = new Complex[N];
-                Complex[] FFT = new Complex[N];
-                for (int j = 0; j < N; j++)
-                {
-                    FFT[j] = new Complex(Math.Cos(u[k, j]), Math.Sin(u[k, j]));
-                    FFT[j] *= A0;
-                    filtered[j] = FFT[j];
-                }
+                Complex[] filtered = P.Apply(N, A0, u, k);
 
-                Fourier.Forward(FFT, FourierOptions.NoScaling);
-                double norm = 1.0 / N;
-                for (int j = 0; j < N; j++)
-                    FFT[j] = norm * FFT[j];
-
-                // TODO optimize for almost empty matrices
-                for (int m = 0; m < N; m++)
-                {
-                    for (int l = 0; l < P_size; l++)
-                    {
-                        Complex w = e_k((l - P_max) * m, N);
-                        for (int j = 0; j < P_max; j++)
-                        {
-                            filtered[m] += P[l, j] * FFT[FFT.Length - P_max + j] * w;
-                        }
-                        for (int j = P_max; j < P_size; j++)
-                        {
-                            filtered[m] += P[l, j] * FFT[j - P_max] * w;
-                        }
-                    }
-                }
                 double[] iFT = new double[N];
                 for (int j = 0; j < N; j++)
                 {
@@ -144,13 +114,6 @@ namespace Bifurcation
 
                 asyncArg.calcProgress?.Report((k + 1) / kMax);
             }
-        }
-
-        private static Complex e_k(int k, int N)
-        {
-            if (k % N == 0) return 1;
-            double arg = 2 * Math.PI * k / N;
-            return new Complex(Math.Cos(arg), Math.Sin(arg));
         }
     }
 }

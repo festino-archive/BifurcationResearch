@@ -2,6 +2,7 @@
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
+using MathNet.Numerics.IntegralTransforms;
 
 namespace Bifurcation
 {
@@ -20,7 +21,7 @@ namespace Bifurcation
         public Filter(int size)
         {
             Size = size;
-            FullSize = (Size + 1) * 2;
+            FullSize = Size * 2 + 1;
             P = new Complex[FullSize, FullSize];
             NonDiagonalCount = 0;
             IsDiagonal = NonDiagonalCount == 0;
@@ -54,32 +55,52 @@ namespace Bifurcation
             }
         }
 
-        private void CalcABG()
+        public Complex[] Apply(int N, Complex A_in, double[,] u, int k)
         {
-            if (alphas != null)
-                return;
-            int fullSize = FullSize;
-            int N = Size;
-            alphas = new Complex[fullSize];
-            betas = new Complex[fullSize];
-            gammas = new Complex[fullSize, fullSize];
-            Complex rho = ComplexUtils.GetQ(P[N, N]);
-            Complex rho_c = ComplexUtils.GetConjugateQ(P[N, N]);
-            for (int m = -N; m <= N; m++)
+            Complex[] filtered = new Complex[N];
+            Complex[] FFT = new Complex[N];
+            for (int j = 0; j < N; j++)
             {
-                int M = N + m;
-                int nM = N - m;
-                alphas[M] = rho_c * ComplexUtils.GetQ(P[M, M]) - rho * ComplexUtils.GetConjugateQ(P[nM, nM]);
-                betas[M] = rho_c * P[nM, M] - rho * ComplexUtils.GetConjugate(P[M, nM]);
-                for (int k = -N; k <= N; k++)
+                FFT[j] = new Complex(Math.Cos(u[k, j]), Math.Sin(u[k, j]));
+                FFT[j] *= A_in;
+                filtered[j] = FFT[j];
+            }
+
+            Fourier.Forward(FFT, FourierOptions.NoScaling);
+            double norm = 1.0 / N;
+            for (int j = 0; j < N; j++)
+                FFT[j] = norm * FFT[j];
+
+            // TODO optimize for almost empty matrices
+            ApplyFull(filtered, FFT, N);
+
+            return filtered;
+        }
+
+        private void ApplyFull(Complex[] filtered, Complex[] FFT, int N)
+        {
+            for (int m = 0; m < N; m++)
+            {
+                for (int l = 0; l < FullSize; l++)
                 {
-                    if (k == m || k == -m)
-                        continue;
-                    int K = N + k;
-                    int nK = N - k;
-                    gammas[M, K] = rho_c * P[M, K] - rho * ComplexUtils.GetConjugate(P[nM, nK]);
+                    Complex w = e_k((l - Size) * m, N);
+                    for (int j = 0; j < Size; j++)
+                    {
+                        filtered[m] += P[l, j] * FFT[FFT.Length - Size + j] * w;
+                    }
+                    for (int j = Size; j < FullSize; j++)
+                    {
+                        filtered[m] += P[l, j] * FFT[j - Size] * w;
+                    }
                 }
             }
+        }
+
+        private static Complex e_k(int k, int N)
+        {
+            if (k % N == 0) return 1;
+            double arg = 2 * Math.PI * k / N;
+            return new Complex(Math.Cos(arg), Math.Sin(arg));
         }
 
         public Tuple<Complex[], Complex[,]> GetEigenValues(ModelParams p)
@@ -144,6 +165,34 @@ namespace Bifurcation
             der /= fullSize;
             der *= p.A0m2;
             return der;
+        }
+
+        private void CalcABG()
+        {
+            if (alphas != null)
+                return;
+            int fullSize = FullSize;
+            int N = Size;
+            alphas = new Complex[fullSize];
+            betas = new Complex[fullSize];
+            gammas = new Complex[fullSize, fullSize];
+            Complex rho = ComplexUtils.GetQ(P[N, N]);
+            Complex rho_c = ComplexUtils.GetConjugateQ(P[N, N]);
+            for (int m = -N; m <= N; m++)
+            {
+                int M = N + m;
+                int nM = N - m;
+                alphas[M] = rho_c * ComplexUtils.GetQ(P[M, M]) - rho * ComplexUtils.GetConjugateQ(P[nM, nM]);
+                betas[M] = rho_c * P[nM, M] - rho * ComplexUtils.GetConjugate(P[M, nM]);
+                for (int k = -N; k <= N; k++)
+                {
+                    if (k == m || k == -m)
+                        continue;
+                    int K = N + k;
+                    int nK = N - k;
+                    gammas[M, K] = rho_c * P[M, K] - rho * ComplexUtils.GetConjugate(P[nM, nK]);
+                }
+            }
         }
 
         public int FindDiagCriticalN(double D, double A0, double K)

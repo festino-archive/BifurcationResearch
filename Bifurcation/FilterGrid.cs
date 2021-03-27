@@ -116,8 +116,8 @@ namespace Bifurcation
             try
             {
                 Complex parsed = ComplexUtils.Parse(text);
-                int i = Grid.GetRow(textBox);
-                int j = Grid.GetColumn(textBox);
+                int i = Grid.GetRow(textBox) - 1;
+                int j = Grid.GetColumn(textBox) - 1;
                 Filter[i, j] = parsed;
                 if (parsed == 0)
                     textBox.Background = COLOR_EMPTY;

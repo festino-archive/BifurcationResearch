@@ -3,6 +3,7 @@ using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
 using MathNet.Numerics.IntegralTransforms;
+using System.Collections.Generic;
 
 namespace Bifurcation
 {
@@ -11,8 +12,11 @@ namespace Bifurcation
         private Complex[,] P;
         public int Size { get; private set; }
         public int FullSize { get; private set; }
+
         public bool IsDiagonal { get; private set; }
         private int NonDiagonalCount;
+        private List<Tuple<int, int>> NonZeroElements = new List<Tuple<int, int>>();
+        private bool UseNonZero = true;
 
         private Complex[] alphas = null;
         private Complex[] betas = null;
@@ -24,7 +28,7 @@ namespace Bifurcation
             FullSize = Size * 2 + 1;
             P = new Complex[FullSize, FullSize];
             NonDiagonalCount = 0;
-            IsDiagonal = NonDiagonalCount == 0;
+            UpdateNonZeroBools();
         }
 
         public Filter(Complex[,] P)
@@ -34,8 +38,28 @@ namespace Bifurcation
             this.P = (Complex[,])P.Clone();
             FullSize = P.GetLength(0);
             Size = (FullSize - 1) / 2;
-            NonDiagonalCount = NonDiagonalElements(P);
+            ScanElements(P);
+        }
+
+        private void ScanElements(Complex[,] P)
+        {
+            int count = 0;
+            for (int i = 0; i < FullSize; i++)
+                for (int j = 0; j < FullSize; j++)
+                    if (P[i, j] != 0)
+                    {
+                        NonZeroElements.Add(Tuple.Create(i, j));
+                        if (i != j)
+                            count++;
+                    }
+            NonDiagonalCount = count;
+            UpdateNonZeroBools();
+        }
+
+        private void UpdateNonZeroBools()
+        {
             IsDiagonal = NonDiagonalCount == 0;
+            UseNonZero = NonZeroElements.Count / (double)(FullSize * FullSize) <= 0.5;
         }
 
         public Complex this[int i, int j]
@@ -43,19 +67,25 @@ namespace Bifurcation
             get => P[i, j];
             set
             {
-                if (i != j)
+                if (P[i, j] == 0 && value != 0)
                 {
-                    if (P[i, j] == 0 && value != 0)
+                    NonZeroElements.Add(Tuple.Create(i, j));
+                    NonZeroElements.Sort();
+                    if (i != j)
                         NonDiagonalCount++;
-                    else if (P[i, j] != 0 && value == 0)
-                        NonDiagonalCount--;
-                    IsDiagonal = NonDiagonalCount == 0;
                 }
+                else if (P[i, j] != 0 && value == 0)
+                {
+                    NonZeroElements.Remove(Tuple.Create(i, j));
+                    if (i != j)
+                        NonDiagonalCount--;
+                }
+                UpdateNonZeroBools();
                 P[i, j] = value;
             }
         }
 
-        public Complex[] Apply(int N, Complex A_in, double[,] u, int k)
+        public Complex[] Apply(Complex A_in, int N, double[,] u, int k)
         {
             Complex[] filtered = new Complex[N];
             Complex[] FFT = new Complex[N];
@@ -72,9 +102,27 @@ namespace Bifurcation
                 FFT[j] = norm * FFT[j];
 
             // TODO optimize for almost empty matrices
-            ApplyFull(filtered, FFT, N);
+            if (UseNonZero)
+                ApplyNonZero(filtered, FFT, N);
+            else
+                ApplyFull(filtered, FFT, N);
 
             return filtered;
+        }
+
+        private void ApplyNonZero(Complex[] filtered, Complex[] FFT, int N)
+        {
+            foreach ((int l, int j) in NonZeroElements)
+            {
+                for (int m = 0; m < N; m++)
+                {
+                    Complex w = e_k((l - Size) * m, N); // new w for same l and different j
+                    if (j < Size)
+                        filtered[m] += P[l, j] * FFT[FFT.Length - Size + j] * w;
+                    else
+                        filtered[m] += P[l, j] * FFT[j - Size] * w;
+                }
+            }
         }
 
         private void ApplyFull(Complex[] filtered, Complex[] FFT, int N)
@@ -253,16 +301,6 @@ namespace Bifurcation
                 else
                     return double.PositiveInfinity;
             return (1 + D * n_cap * n_cap) / divider;
-        }
-
-        private int NonDiagonalElements(Complex[,] P)
-        {
-            int count = 0;
-            for (int i = 0; i < FullSize; i++)
-                for (int j = 0; j < FullSize; j++)
-                    if (i != j && P[i, j] != 0)
-                        count++;
-            return count;
         }
     }
 }

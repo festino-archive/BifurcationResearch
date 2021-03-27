@@ -90,7 +90,7 @@ namespace Bifurcation
                 if (asyncArg.token.IsCancellationRequested)
                     return;
 
-                Complex[] filtered = P.Apply(N, A0, u, k);
+                Complex[] filtered = P.Apply(A0, N, u, k);
 
                 double[] iFT = new double[N];
                 for (int j = 0; j < N; j++)

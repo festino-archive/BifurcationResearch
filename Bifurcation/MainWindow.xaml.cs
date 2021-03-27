@@ -18,9 +18,10 @@ namespace Bifurcation
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static readonly double PARAMNAME_WIDTH = 40;
         private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0;
-        private FilterGrid filterGrid;
+        private RadioButtonGroup FilterModeGroup;
+        private FilterBuilder filterBuilder;
+
         private Solver curSolver;
         private Visualization vis;
         private TextBlock[] Tvalues;
@@ -35,9 +36,13 @@ namespace Bifurcation
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            Logger.Destination = log;
             RenderOptions.SetBitmapScalingMode(scopeImage, BitmapScalingMode.NearestNeighbor);
 
-            Logger.Destination = log;
+            RadioButton[] radioButtons = { matrixRadioButton, formulaRadioButton };
+            FilterModeGroup = new RadioButtonGroup(radioButtons);
+            FilterModeGroup.Changed += FillModeChanged;
+
             input_D = AddParam("D", "0.01");
             input_A0 = AddParam("A0", "1");
             input_K = AddParam("K", "3.5");
@@ -51,9 +56,17 @@ namespace Bifurcation
             P[10, 10] = new Complex(0.6, 0.3);
             P[2, 2] = new Complex(0.4, -0.159);
             P[8, 8] = new Complex(-0.4, -0.159);
-            filterGrid = new FilterGrid(matrixPanel);
+            FilterGrid filterGrid = new FilterGrid(filterPanel);
             filterGrid.Set(P);
-            textBox_filterSize.Text = filterGrid.Size.ToString();
+            filterBuilder = filterGrid;
+        }
+
+        private void FillModeChanged(int index)
+        {
+            if (index == 0)
+                filterBuilder = new FilterGrid(filterPanel);
+            else if (index == 1)
+                filterBuilder = new FilterGrid(filterPanel);
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -227,14 +240,14 @@ namespace Bifurcation
                 return;
             }
 
-            Filter P = filterGrid.Filter;
+            Filter P = filterBuilder.Filter;
 
             Solver newSolver;
             string errorElem = "";
             double chi = 0;
             try
             {
-                int n = filterGrid.Size;
+                int n = P.Size;
                 errorElem = "D";
                 double D = double.Parse(input_D.Text);
                 errorElem = "A0";
@@ -263,7 +276,6 @@ namespace Bifurcation
                 for (int j = 0; j < u0.Length; j++)
                 {
                     double x = 2 * Math.PI * j / u0.Length;
-                    //u0[j] = Solver.GetChi(K, P[n, n]) + 0.1 * Math.Cos(5 * x);
                     IExpression substituted = ExprSimplifier.Substitute(expr, "x", new ExprConst(x.ToString("f15")));
                     substituted = ExprSimplifier.Simplify(substituted);
                     errorElem = "u0 finale";
@@ -305,7 +317,7 @@ namespace Bifurcation
 
             curSolver = newSolver;
             textBlock_Khi.Text = "𝜒 = " + newSolver.Chi.ToString("f4");
-            filterGrid.UpdateEigen(textBlock_critical, curSolver.Parameters);
+            FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
 
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
@@ -333,17 +345,6 @@ namespace Bifurcation
                 drawButton.Content = "Draw";
                 HideProgress();
             }
-        }
-
-        private void Psize_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            TextBox textBox = (TextBox)sender;
-            int res;
-            if (!int.TryParse(textBox.Text, out res))
-                return;
-            if (res == filterGrid.Size || res > 20)
-                return;
-            filterGrid.Update(res);
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)

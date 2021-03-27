@@ -27,15 +27,19 @@
 
             <Grid Grid.Column="1" Margin="5,0,5,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="17"/>
+                    <RowDefinition Height="18"/>
                     <RowDefinition Height="1*"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="filter size = "/>
-                    <TextBox x:Name="textBox_filterSize" TextWrapping="Wrap" Width="40" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" TextChanged="Psize_TextChanged"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Fill mode:  "/>
+                    <RadioButton x:Name="matrixRadioButton" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="0,1,0,0">
+                        matrix
+                    </RadioButton>
+                    <RadioButton x:Name="formulaRadioButton" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="5,1,0,0">
+                        formulas
+                    </RadioButton>
                 </StackPanel>
-                <Grid x:Name="matrixPanel" Grid.Row="1" Margin="5,5,5,0">
-                </Grid>
+                <Grid x:Name="filterPanel" Grid.Row="1" Margin="0,5,0,0"/>
             </Grid>
 
             <StackPanel x:Name="outputPanel" HorizontalAlignment="Stretch" Grid.Column="2" Margin="5,5,5,5">

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -7,21 +6,40 @@ using static Bifurcation.Utils;
 
 namespace Bifurcation
 {
-    class FilterGrid
+    class FilterGrid : FilterBuilder
     {
         public readonly Brush COLOR_VALUE = new SolidColorBrush(Color.FromRgb(235, 255, 235));
         public readonly Brush COLOR_EMPTY = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
         public readonly Brush COLOR_ERROR = new SolidColorBrush(Color.FromRgb(255, 230, 230));
 
+        private TextBox sizeInput;
         private Grid matrixPanel;
         private TextBox[,] cells;
 
         public int Size { get; private set; }
         public Filter Filter { get; private set; }
 
-        public FilterGrid(Grid matrixPanel)
+        public FilterGrid(Grid filterPanel)
         {
-            this.matrixPanel = matrixPanel;
+            filterPanel.Children.Clear();
+            filterPanel.RowDefinitions.Clear();
+            filterPanel.RowDefinitions.Add(RowPixelDefinition(20));
+            filterPanel.RowDefinitions.Add(RowStarDefinition(1));
+            filterPanel.ColumnDefinitions.Clear();
+            filterPanel.ColumnDefinitions.Add(ColumnStarDefinition(1));
+
+            matrixPanel = new Grid() { Margin = new Thickness(5, 5, 5, 0) };
+            Grid.SetRow(matrixPanel, 1);
+            filterPanel.Children.Add(matrixPanel);
+
+            StackPanel sizePanel = new StackPanel() { Orientation = Orientation.Horizontal };
+            TextBlock sizeText = new TextBlock() { Text = "filter size = " };
+            sizeInput = new TextBox() { Width = 40 };
+            sizeInput.TextChanged += Psize_TextChanged;
+            sizeInput.Text = "2";
+            sizePanel.Children.Add(sizeText);
+            sizePanel.Children.Add(sizeInput);
+            filterPanel.Children.Add(sizePanel);
         }
 
         public void UpdateFromGrid()
@@ -37,7 +55,7 @@ namespace Bifurcation
         public void Set(Complex[,] P)
         {
             int fullSize = P.GetLength(0);
-            Update((fullSize - 1) / 2);
+            sizeInput.Text = ((fullSize - 1) / 2).ToString(); // cause Update()
             foreach (UIElement elem in matrixPanel.Children)
             {
                 int i = Grid.GetRow(elem) - 1;
@@ -130,61 +148,15 @@ namespace Bifurcation
             }
         }
 
-        public void UpdateEigen(TextBlock textBlock, ModelParams param)
+        private void Psize_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var eigen = Filter.GetEigenValues(param);
-            Logger.Write("eigenvalues:");
-            Logger.Write(eigen.Item1);
-            Logger.Write("eigenvectors: (columns)");
-            Logger.Write(eigen.Item2);
-
-            if (Filter.IsDiagonal)
-            {
-                int n_cap = Filter.FindDiagCriticalN(param.D, 1, param.K);
-                textBlock.Text = $"K^({n_cap}) = " + Filter.FindDiagCritical(param.D, 1, n_cap);
-                textBlock.Text += '\n' + "n^ = " + n_cap;
-            }
-            else
-            {
-                int count = 0;
-                int[] n_cap = new int[eigen.Item1.Length];
-                bool multi = false;
-                Complex value = 0;
-                for (int n = 0; n < eigen.Item1.Length; n++)
-                {
-                    Complex v = eigen.Item1[n];
-                    if (v.Real > -0.001)
-                    {
-                        if (Math.Abs(value.Imaginary - v.Imaginary) >= 0.001)
-                            multi = true;
-                        n_cap[count] = n;
-                        count++;
-                        value = v;
-                    }
-                }
-                if (count == 0)
-                    textBlock.Text = "No n^";
-                else if (multi)
-                    textBlock.Text = "Multi n^";
-                else
-                {
-                    string text = "λn^ = " + value.ToString("f3") + " (multiplicity=" + count;
-                    if (count == 1)
-                        text += ", derivative=" + Filter.GetDerivative(n_cap[0], param).ToString("f2") + ")";
-                    else
-                    {
-                        text += ")\nderivatives:[";
-                        for (int i = 0; i < count; i++)
-                        {
-                            if (i > 0)
-                                text += ", ";
-                            text += Filter.GetDerivative(n_cap[i], param).ToString("f2");
-                        }
-                        text += "]";
-                    }
-                    textBlock.Text = text;
-                }
-            }
+            TextBox textBox = (TextBox)sender;
+            int res;
+            if (!int.TryParse(textBox.Text, out res))
+                return;
+            if (res == Size || res > 20)
+                return;
+            Update(res);
         }
     }
 }

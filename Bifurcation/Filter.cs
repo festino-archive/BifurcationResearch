@@ -101,7 +101,6 @@ namespace Bifurcation
             for (int j = 0; j < N; j++)
                 FFT[j] = norm * FFT[j];
 
-            // TODO optimize for almost empty matrices
             if (UseNonZero)
                 ApplyNonZero(filtered, FFT, N);
             else

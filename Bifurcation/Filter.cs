@@ -81,6 +81,12 @@ namespace Bifurcation
                         NonDiagonalCount--;
                 }
                 UpdateNonZeroBools();
+                if (P[i, j] != value)
+                {
+                    alphas = null;
+                    betas = null;
+                    gammas = null;
+                }
                 P[i, j] = value;
             }
         }

@@ -21,6 +21,7 @@ namespace Bifurcation
         private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0;
         private RadioButtonGroup FilterModeGroup;
         private FilterBuilder filterBuilder;
+        private ExprParser Parser;
 
         private Solver curSolver;
         private Visualization vis;
@@ -51,6 +52,11 @@ namespace Bifurcation
             input_N = AddParam("spatial", "256");
             input_u0 = AddParam("u0", "chi + 0.1 cos 5x");
 
+            Parser = new ExprParser();
+            Parser.AddAliases(MathAliases.GetDefaultFunctions());
+            Parser.AddAlias(MathAliases.ConvertName("chi"), 0);
+            Parser.AddAlias(MathAliases.ConvertName("x"), 0);
+
             Complex[,] P = new Complex[11, 11];
             P[0, 0] = new Complex(0.2, -0.3);
             P[10, 10] = new Complex(0.6, 0.3);
@@ -66,7 +72,7 @@ namespace Bifurcation
             if (index == 0)
                 filterBuilder = new FilterGrid(filterPanel);
             else if (index == 1)
-                filterBuilder = new FilterGrid(filterPanel);
+                filterBuilder = new FilterFormulas(filterPanel);
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -262,11 +268,7 @@ namespace Bifurcation
                 int N = int.Parse(input_N.Text);
 
                 errorElem = "u0";
-                ExprParser parser = new ExprParser();
-                parser.AddAliases(MathAliases.GetDefaultFunctions());
-                parser.AddAlias(MathAliases.ConvertName("chi"), 0);
-                parser.AddAlias(MathAliases.ConvertName("x"), 0);
-                IExpression expr = parser.Parse(input_u0.Text);
+                IExpression expr = Parser.Parse(input_u0.Text);
                 expr = ExprSimplifier.Simplify(expr);
                 textBlock_u0.Text = "u0 = " + expr.AsString();
 

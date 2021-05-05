@@ -3,7 +3,7 @@ using System.Windows.Controls;
 
 namespace Bifurcation
 {
-    public static class Utils
+    public static class GridUtils
     {
         public static ColumnDefinition ColumnStarDefinition(double value)
         {

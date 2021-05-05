@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using static Bifurcation.Utils;
+using static Bifurcation.GridUtils;
 
 namespace Bifurcation
 {

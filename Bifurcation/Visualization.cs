@@ -30,7 +30,7 @@ namespace Bifurcation
         public WriteableBitmapData Draw(AsyncArg asyncArg)
         {
             solver.Solve(asyncArg);
-            if (asyncArg.token.IsCancellationRequested)
+            if (asyncArg.Token.IsCancellationRequested)
                 return null;
 
             int maxT = solver.Solution.GetLength(0);
@@ -58,7 +58,7 @@ namespace Bifurcation
 
             for (int Y = 0; Y < Height; Y++)
             {
-                if (asyncArg.token.IsCancellationRequested)
+                if (asyncArg.Token.IsCancellationRequested)
                     return null;
                 for (int X = 0; X < Width; X++)
                 {
@@ -80,7 +80,7 @@ namespace Bifurcation
                         ImageArr[index + 2] = color;
                     }
                 }
-                asyncArg.drawProgress?.Report((Y + 1) / Height);
+                asyncArg.DrawProgress?.Report((Y + 1) / Height);
             }
             return new WriteableBitmapData(Width, Height, nStride, ImageArr);
         }

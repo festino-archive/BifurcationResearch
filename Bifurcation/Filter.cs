@@ -115,6 +115,30 @@ namespace Bifurcation
             return filtered;
         }
 
+        public Complex[] Apply(Complex A_in, int N, double[] u)
+        {
+            Complex[] filtered = new Complex[N];
+            Complex[] FFT = new Complex[N];
+            for (int j = 0; j < N; j++)
+            {
+                FFT[j] = new Complex(Math.Cos(u[j]), Math.Sin(u[j]));
+                FFT[j] *= A_in;
+                filtered[j] = FFT[j];
+            }
+
+            Fourier.Forward(FFT, FourierOptions.NoScaling);
+            double norm = 1.0 / N;
+            for (int j = 0; j < N; j++)
+                FFT[j] = norm * FFT[j];
+
+            if (UseNonZero)
+                ApplyNonZero(filtered, FFT, N);
+            else
+                ApplyFull(filtered, FFT, N);
+
+            return filtered;
+        }
+
         private void ApplyNonZero(Complex[] filtered, Complex[] FFT, int N)
         {
             foreach ((int l, int j) in NonZeroElements)

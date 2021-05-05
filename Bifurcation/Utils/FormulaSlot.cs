@@ -1,25 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using static Bifurcation.Utils;
+using static Bifurcation.GridUtils;
 
 namespace Bifurcation
 {
     class FormulaSlot
     {
-        public double Value { get; private set; }
-
         private readonly FilterFormulas Builder;
-        private readonly List<FormulaSlot> Formulas;
         private readonly WrapPanel Holder;
         private readonly Grid Container;
         public readonly int K, N;
+        public TextBox Input { get; }
 
-        public FormulaSlot(FilterFormulas builder, List<FormulaSlot> formulas, int k, int n, WrapPanel holder)
+        public FormulaSlot(FilterFormulas builder, int k, int n, WrapPanel holder)
         {
             Builder = builder;
             Holder = holder;
-            Formulas = formulas;
             K = k;
             N = n;
 
@@ -51,25 +48,18 @@ namespace Bifurcation
             Grid.SetColumn(nameIndex, 1);
             Container.Children.Add(nameIndex);
 
-            TextBox input = new TextBox()
+            Input = new TextBox()
             {
                 Text = "0", MinWidth = 30,
                 Height = name.ActualHeight, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 0, 15, 0)
             };
-            input.TextChanged += (a, b) => Input_TextChanged();
             TextBlock result = new TextBlock() { Text = "0" };
-            Grid.SetColumn(input, 2);
+            Grid.SetColumn(Input, 2);
             Grid.SetColumn(result, 2);
             Grid.SetRow(result, 1);
-            Container.Children.Add(input);
+            Container.Children.Add(Input);
             Container.Children.Add(result);
-        }
-
-        private void Input_TextChanged()
-        {
-            // try parse, using inner references => error if looped
-            // update outer references
         }
 
         private void RemoveButton_Clicked()

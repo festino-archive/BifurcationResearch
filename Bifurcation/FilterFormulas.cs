@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
-using static Bifurcation.Utils;
+using static Bifurcation.GridUtils;
 
 namespace Bifurcation
 {
@@ -27,11 +27,16 @@ namespace Bifurcation
                 int fullSize = 2 * maxIndex + 1;
                 Complex[,] P = new Complex[fullSize, fullSize];
                 foreach (FormulaSlot slot in Formulas)
-                    P[maxIndex + slot.K, maxIndex + slot.N] = slot.Value;
+                {
+                    Complex? v = Dependencies.Get($"P({slot.K},{slot.N})");
+                    Complex value = v.HasValue ? v.Value : 0;
+                    P[maxIndex + slot.K, maxIndex + slot.N] = value;
+                }
                 return new Filter(P);
             }
         }
 
+        private DependencySpace Dependencies;
         private readonly List<FormulaSlot> Formulas = new List<FormulaSlot>();
         private WrapPanel elemPanel;
         private StackPanel AddPanel;
@@ -39,8 +44,10 @@ namespace Bifurcation
         private TextBox IndexK;
         private TextBox IndexN;
 
-        public FilterFormulas(Grid filterPanel)
+        public FilterFormulas(Grid filterPanel, DependencySpace dependencies)
         {
+            Dependencies = dependencies;
+
             filterPanel.Children.Clear();
             filterPanel.RowDefinitions.Clear();
             filterPanel.RowDefinitions.Add(RowPixelDefinition(20));
@@ -57,7 +64,7 @@ namespace Bifurcation
             Grid.SetRow(elemPanel, 1);
             filterPanel.Children.Add(elemPanel);
 
-            Formulas.Add(new FormulaSlot(this, Formulas, 1, 1, elemPanel));
+            AddSlot(1, 1);
 
             AddButton = new Button()
             {
@@ -81,12 +88,19 @@ namespace Bifurcation
             elemPanel.Children.Add(AddPanel);
         }
 
+        private void AddSlot(int K, int N)
+        {
+            FormulaSlot slot = new FormulaSlot(this, K, N, elemPanel);
+            Formulas.Add(slot);
+            Dependencies.Add(new DependencyNode($"P({K},{N})", slot.Input));
+        }
+
         private void AddButton_Clicked()
         {
             int K = int.Parse(IndexK.Text);
             int N = int.Parse(IndexN.Text);
             elemPanel.Children.Remove(AddPanel);
-            Formulas.Add(new FormulaSlot(this, Formulas, K, N, elemPanel));
+            AddSlot(K, N);
             IndexK.Text = "0";
             IndexN.Text = "0";
             CheckIndices();

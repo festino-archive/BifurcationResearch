@@ -9,7 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HeatSim;
-using static Bifurcation.Utils;
+using static Bifurcation.GridUtils;
 
 namespace Bifurcation
 {
@@ -20,14 +20,16 @@ namespace Bifurcation
     {
         private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0;
         private RadioButtonGroup FilterModeGroup;
+        private RadioButtonGroup SolutionMethodGroup;
         private FilterBuilder filterBuilder;
-        private ExprParser Parser;
+        private DependencySpace Dependencies;
 
         private Solver curSolver;
         private Visualization vis;
         private TextBlock[] Tvalues;
 
         private CancellationTokenSource solveCancellation = null;
+        private Solver.Method method;
 
         public MainWindow()
         {
@@ -40,10 +42,15 @@ namespace Bifurcation
             Logger.Destination = log;
             RenderOptions.SetBitmapScalingMode(scopeImage, BitmapScalingMode.NearestNeighbor);
 
-            RadioButton[] radioButtons = { matrixRadioButton, formulaRadioButton };
-            FilterModeGroup = new RadioButtonGroup(radioButtons);
+            RadioButton[] filterModeButtons = { matrixRadioButton, formulaRadioButton };
+            FilterModeGroup = new RadioButtonGroup(filterModeButtons);
             FilterModeGroup.Changed += FillModeChanged;
 
+            RadioButton[] solMethodButtons = { explicitRadioButton, implicitRadioButton };
+            SolutionMethodGroup = new RadioButtonGroup(solMethodButtons);
+            SolutionMethodGroup.Changed += SolutionMethodChanged;
+
+            Dependencies = new DependencySpace();
             input_D = AddParam("D", "0.01");
             input_A0 = AddParam("A0", "1");
             input_K = AddParam("K", "3.5");
@@ -51,11 +58,6 @@ namespace Bifurcation
             input_M = AddParam("time", "5000");
             input_N = AddParam("spatial", "256");
             input_u0 = AddParam("u0", "chi + 0.1 cos 5x");
-
-            Parser = new ExprParser();
-            Parser.AddAliases(MathAliases.GetDefaultFunctions());
-            Parser.AddAlias(MathAliases.ConvertName("chi"), 0);
-            Parser.AddAlias(MathAliases.ConvertName("x"), 0);
 
             Complex[,] P = new Complex[11, 11];
             P[0, 0] = new Complex(0.2, -0.3);
@@ -67,12 +69,21 @@ namespace Bifurcation
             filterBuilder = filterGrid;
         }
 
+        private void SolutionMethodChanged(int index)
+        {
+            if (index == 0)
+                method = Solver.Method.EXPLICIT;
+            else if (index == 1)
+                method = Solver.Method.IMPLICIT_2;
+        }
+
         private void FillModeChanged(int index)
         {
+            Dependencies.RemoveFilter();
             if (index == 0)
                 filterBuilder = new FilterGrid(filterPanel);
             else if (index == 1)
-                filterBuilder = new FilterFormulas(filterPanel);
+                filterBuilder = new FilterFormulas(filterPanel, Dependencies);
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -267,23 +278,15 @@ namespace Bifurcation
                 errorElem = "N";
                 int N = int.Parse(input_N.Text);
 
+                chi = Solver.GetChi(K, P[n, n], A0);
+                Dependencies.Set(MathAliases.ConvertName("chi"), chi);
+
                 errorElem = "u0";
-                IExpression expr = Parser.Parse(input_u0.Text);
-                expr = ExprSimplifier.Simplify(expr);
+                IExpression expr = MainParser.Parse(input_u0.Text);
                 textBlock_u0.Text = "u0 = " + expr.AsString();
 
-                chi = Solver.GetChi(K, P[n, n], A0);
-                expr = ExprSimplifier.Substitute(expr, MathAliases.ConvertName("chi"), new ExprConst(chi.ToString("f15")));
-                double[] u0 = new double[N];
-                for (int j = 0; j < u0.Length; j++)
-                {
-                    double x = 2 * Math.PI * j / u0.Length;
-                    IExpression substituted = ExprSimplifier.Substitute(expr, "x", new ExprConst(x.ToString("f15")));
-                    substituted = ExprSimplifier.Simplify(substituted);
-                    errorElem = "u0 finale";
-                    u0[j] = ExprDoubleSimplifier.CalcConstExpr(substituted);
-                    errorElem = "u0";
-                }
+                string[] deps = MainParser.GetDependencies(expr);
+                double[] u0 = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, N);
 
                 errorElem = "solver";
                 newSolver = new Solver(P, T, N, M);
@@ -303,10 +306,10 @@ namespace Bifurcation
             vis = new Visualization(newSolver, 700, 200);
             var calcProgress = new Progress<double>(value => calcBar.Value = value);
             var drawProgress = new Progress<double>(value => drawBar.Value = value);
-            AsyncArg asyncArg = new AsyncArg(calcProgress, drawProgress, solveCancellation.Token);
+            AsyncArg asyncArg = new AsyncArg(method, calcProgress, drawProgress, solveCancellation.Token);
 
             WriteableBitmapData image = await Task.Run(() => vis.Draw(asyncArg));
-            if (asyncArg.token.IsCancellationRequested)
+            if (asyncArg.Token.IsCancellationRequested)
                 return;
             WriteableBitmap bmp = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgr32, null);
             bmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);

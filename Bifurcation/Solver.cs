@@ -41,6 +41,9 @@ namespace Bifurcation
             this.T = T;
             xStep = 2 * Math.PI / N;
             tStep = T / M;
+
+            int P_max = FilterSize;
+            Chi = GetChi(K, P[P_max, P_max], A0);
         }
 
         public void SetParams(ModelParams p)
@@ -69,9 +72,6 @@ namespace Bifurcation
             if (Solved)
                 return;
             Solved = true;
-
-            int P_max = FilterSize;
-            Chi = GetChi(K, P[P_max, P_max], A0);
 
             Solution = new double[M, N];
             double[,] u = Solution;

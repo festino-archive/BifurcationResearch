@@ -18,7 +18,9 @@ namespace Bifurcation
     /// </summary>
     public partial class MainWindow : Window
     {
-        private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0;
+        private static readonly int VISUALIZATION_WIDTH = 700, VISUALIZATION_HEIGHT = 200;
+
+        private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0, input_v;
         private RadioButtonGroup FilterModeGroup;
         private RadioButtonGroup SolutionMethodGroup;
         private FilterBuilder filterBuilder;
@@ -58,6 +60,9 @@ namespace Bifurcation
             input_M = AddParam("time", "5000");
             input_N = AddParam("spatial", "256");
             input_u0 = AddParam("u0", "chi + 0.1 cos 5x");
+            AddLabel("");
+            input_v = AddParam("v(x, t)", "chi + cos(0.1t) * cos 3x + sin(0.1t) * sin 3x");
+            AddButton("Draw", (a, b) => DrawExpectedSolution());
 
             Complex[,] P = new Complex[11, 11];
             P[0, 0] = new Complex(0.2, -0.3);
@@ -249,6 +254,40 @@ namespace Bifurcation
             return input;
         }
 
+        private void AddLabel(string text)
+        {
+            TextBlock label = new TextBlock
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Text = text
+            };
+            paramPanel.Children.Add(label);
+        }
+
+        private void AddButton(string text, RoutedEventHandler onClick)
+        {
+            Button button = new Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Content = text,
+                Padding = new Thickness(5)
+            };
+            button.Click += onClick;
+            paramPanel.Children.Add(button);
+        }
+
+        private void DrawExpectedSolution()
+        {
+            IExpression expr = MainParser.Parse(input_v.Text);
+            string[] deps = MainParser.GetDependencies(expr);
+            double T = double.Parse(input_T.Text);
+            //int M = int.Parse(input_M.Text);
+            //int N = int.Parse(input_N.Text);
+            //double[,] sol = MainParser.EvalMatrixD(expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
+            double[,] sol = MainParser.EvalMatrixD(expr, Dependencies, deps, "t", T, VISUALIZATION_HEIGHT, "x", 2 * Math.PI, VISUALIZATION_WIDTH);
+            UpdateVisualization(sol);
+        }
+
         private async void drawButton_ClickAsync(object sender, RoutedEventArgs e)
         {
             if (solveCancellation != null)
@@ -303,14 +342,27 @@ namespace Bifurcation
             ShowProgress();
             SwitchDrawButton(true);
 
-            vis = new Visualization(newSolver, 700, 200);
             var calcProgress = new Progress<double>(value => calcBar.Value = value);
             var drawProgress = new Progress<double>(value => drawBar.Value = value);
             AsyncArg asyncArg = new AsyncArg(method, calcProgress, drawProgress, solveCancellation.Token);
-
-            WriteableBitmapData image = await Task.Run(() => vis.Draw(asyncArg));
+            newSolver.Solve(asyncArg);
             if (asyncArg.Token.IsCancellationRequested)
                 return;
+
+            curSolver = newSolver;
+            textBlock_Khi.Text = "𝜒 = " + curSolver.Chi.ToString("f4");
+            FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
+
+            UpdateVisualization(curSolver.Solution);
+            SwitchDrawButton(false);
+        }
+
+        private void UpdateVisualization(double[,] solution)
+        {
+            vis = new Visualization(solution, VISUALIZATION_WIDTH, VISUALIZATION_HEIGHT);
+
+            WriteableBitmapData image = vis.Draw();
+
             WriteableBitmap bmp = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgr32, null);
             bmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);
             graphImage.Source = bmp;
@@ -320,13 +372,8 @@ namespace Bifurcation
             profileBmp.WritePixels(image.Dimentions, image.Pixels, image.NStride, 0, 0);
             profileImage.Source = profileBmp;
 
-            curSolver = newSolver;
-            textBlock_Khi.Text = "𝜒 = " + newSolver.Chi.ToString("f4");
-            FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
-
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
-            SwitchDrawButton(false);
         }
 
         private void ShowProgress() {

@@ -11,7 +11,6 @@ namespace Bifurcation
     class Visualization
     {
         private static readonly double MAX_RESCALE = 10_000_000_000, MIN_AMPL = 1 / MAX_RESCALE;
-        private Solver solver;
         private double Min;
         private double Max;
         private double Average;
@@ -19,22 +18,19 @@ namespace Bifurcation
 
         private int Width;
         private int Height;
+        double[,] solution;
 
-        public Visualization(Solver solver, int width, int height)
+        public Visualization(double[,] solution, int width, int height)
         {
-            this.solver = solver;
             Width = width;
             Height = height;
+            this.solution = solution;
         }
 
-        public WriteableBitmapData Draw(AsyncArg asyncArg)
+        public WriteableBitmapData Draw()
         {
-            solver.Solve(asyncArg);
-            if (asyncArg.Token.IsCancellationRequested)
-                return null;
-
-            int maxT = solver.Solution.GetLength(0);
-            int maxX = solver.Solution.GetLength(1);
+            int maxT = solution.GetLength(0);
+            int maxX = solution.GetLength(1);
             int nStride = CalcStride(Width);
 
             byte[] ImageArr = new byte[Height * nStride];
@@ -44,7 +40,7 @@ namespace Bifurcation
             for (int j = 0; j < maxX; j++)
                 for (int k = 0; k < maxT; k += maxT - 1)
                 {
-                    double value = solver.Solution[k, j];
+                    double value = solution[k, j];
                     if (Min > value)
                         Min = value;
                     if (Max < value)
@@ -58,13 +54,11 @@ namespace Bifurcation
 
             for (int Y = 0; Y < Height; Y++)
             {
-                if (asyncArg.Token.IsCancellationRequested)
-                    return null;
                 for (int X = 0; X < Width; X++)
                 {
                     int t = (int)(X / (float)Width * maxT);
                     int x = (int)(Y / (float)Height * maxX);
-                    double value = solver.Solution[t, x];
+                    double value = solution[t, x];
                     int index = (Y * Width + X) * 4;
                     if (double.IsNaN(value))
                     {
@@ -80,13 +74,14 @@ namespace Bifurcation
                         ImageArr[index + 2] = color;
                     }
                 }
-                asyncArg.DrawProgress?.Report((Y + 1) / Height);
             }
             return new WriteableBitmapData(Width, Height, nStride, ImageArr);
         }
 
         public WriteableBitmapData DrawProfile(int width, int height)
         {
+            int TSize = solution.GetLength(0);
+            int XSize = solution.GetLength(1);
             int nStride = CalcStride(width);
             byte[] imageArr = new byte[height * nStride];
             byte color = 128;
@@ -101,11 +96,11 @@ namespace Bifurcation
                 }
             }
 
-            int k = solver.TSize - 1;
+            int k = TSize - 1;
             double pmin = double.MaxValue, pmax = double.MinValue;
-            for (int j = 0; j < solver.XSize; j++)
+            for (int j = 0; j < XSize; j++)
             {
-                double v = solver.Solution[k, j];
+                double v = solution[k, j];
                 if (pmin > v)
                     pmin = v;
                 if (pmax < v)
@@ -121,8 +116,8 @@ namespace Bifurcation
             int uPrev = 0;
             for (int x = 0; x < height; x++)
             {
-                int j = x * solver.XSize / height;
-                double value = solver.Solution[k, j];
+                int j = x * XSize / height;
+                double value = solution[k, j];
                 value = (value - average) * rescale; // [-1, 1]
                 value = (value + 1) / 2; // [0, 1]
                 int u = (int)Math.Floor(value * width);
@@ -150,8 +145,8 @@ namespace Bifurcation
 
         public WriteableBitmapData DrawScope(int kCursor, int jCursor, int kRadius, int jRadius) // maxSizes
         {
-            int maxT = solver.TSize;
-            int maxX = solver.XSize;
+            int maxT = solution.GetLength(0);
+            int maxX = solution.GetLength(1);
 
             int kSize = 2 * kRadius + 1;
             int jSize = 2 * jRadius + 1;
@@ -171,7 +166,7 @@ namespace Bifurcation
                     int j = jImg;
                     if (j < 0) j += maxX;
                     else if (j >= maxX) j -= maxX;
-                    value = solver.Solution[k, j];
+                    value = solution[k, j];
                     value -= Average;
                     byte color = (byte)(128 + 127 * Math.Clamp(value * Rescale, -1, 1));
                     int index = ((jImg - jTop) * kSize + k - kLeft) * 4;

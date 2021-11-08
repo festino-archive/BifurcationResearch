@@ -15,6 +15,7 @@ namespace Bifurcation
             Parser = new ExprParser();
             Parser.AddAliases(MathAliases.GetDefaultFunctions());
             Parser.AddAlias(MathAliases.ConvertName("i"), 0);
+            Parser.AddAlias(MathAliases.ConvertName("t"), 0);
             Parser.AddAlias(MathAliases.ConvertName("x"), 0);
             Parser.AddAlias(MathAliases.ConvertName("chi"), 0);
             Parser.AddAlias(MathAliases.ConvertName("rho"), 2);
@@ -154,6 +155,32 @@ namespace Bifurcation
                 u0[j] = ExprDoubleSimplifier.CalcConstExpr(substituted);
             }
             return u0;
+        }
+
+        public static double[,] EvalMatrixD(IExpression expr, DependencySpace depSpace, string[] deps,
+            string var1, double len1, int steps1, string var2, double len2, int steps2)
+        {
+            expr = ExprUtils.GetCopy_Slow(expr);
+            foreach (string dep in deps)
+            {
+                Complex? val = depSpace.Get(dep);
+                if (val.HasValue)
+                    expr = ExprSimplifier.Substitute(expr, dep, new ExprConst(val.Value.Real.ToString("f15")));
+            }
+            double[,] res = new double[steps1, steps2]; // t, x
+            for (int n = 0; n < steps1; n++)
+            {
+                double v1 = len1 * n / steps1;
+                IExpression substituted1 = ExprSimplifier.Substitute(expr, var1, new ExprConst(v1.ToString("f15")));
+                for (int j = 0; j < steps2; j++)
+                {
+                    double v2 = len2 * j / steps2;
+                    IExpression substituted2 = ExprSimplifier.Substitute(substituted1, var2, new ExprConst(v2.ToString("f15")));
+                    substituted2 = ExprSimplifier.Simplify(substituted2);
+                    res[n, j] = ExprDoubleSimplifier.CalcConstExpr(substituted2);
+                }
+            }
+            return res;
         }
     }
 }

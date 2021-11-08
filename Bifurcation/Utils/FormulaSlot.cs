@@ -12,6 +12,7 @@ namespace Bifurcation
         private readonly Grid Container;
         public readonly int K, N;
         public TextBox Input { get; }
+        public TextBlock Result { get; }
 
         public FormulaSlot(FilterFormulas builder, int k, int n, WrapPanel holder)
         {
@@ -54,12 +55,12 @@ namespace Bifurcation
                 Height = name.ActualHeight, VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 0, 15, 0)
             };
-            TextBlock result = new TextBlock() { Text = "0" };
+            Result = new TextBlock() { Text = "0" };
             Grid.SetColumn(Input, 2);
-            Grid.SetColumn(result, 2);
-            Grid.SetRow(result, 1);
+            Grid.SetColumn(Result, 2);
+            Grid.SetRow(Result, 1);
             Container.Children.Add(Input);
-            Container.Children.Add(result);
+            Container.Children.Add(Result);
         }
 
         private void RemoveButton_Clicked()

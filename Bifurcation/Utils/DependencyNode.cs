@@ -10,6 +10,7 @@ namespace Bifurcation
     {
         public delegate void UpdateDependencies(DependencyNode sender, string[] dependencies);
         public event UpdateDependencies DependenciesChanged;
+        public event Action<Complex> ValueChanged;
 
         public string Name { get; }
         public List<DependencyNode> DependsOn { get; } = new List<DependencyNode>();
@@ -22,14 +23,15 @@ namespace Bifurcation
         {
             Name = name;
             Param = new DynamicParameter(input);
-            Param.ValueChanged += (expr) => ValueChanged(expr);
+            Param.ValueChanged += (expr) => OnValueChanged(expr);
             Param.DependenciesChanged += (d) => Param_DependenciesChanged(d);
         }
 
-        private void ValueChanged(IExpression expr)
+        private void OnValueChanged(IExpression expr)
         {
             Value = MainParser.Eval(expr, DependsOn);
             Expr = expr;
+            ValueChanged?.Invoke(Value);
         }
 
         private void Param_DependenciesChanged(string[] deps)

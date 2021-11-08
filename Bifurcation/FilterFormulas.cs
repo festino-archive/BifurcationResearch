@@ -92,7 +92,9 @@ namespace Bifurcation
         {
             FormulaSlot slot = new FormulaSlot(this, K, N, elemPanel);
             Formulas.Add(slot);
-            Dependencies.Add(new DependencyNode($"P({K},{N})", slot.Input));
+            DependencyNode newNode = new DependencyNode($"P({K},{N})", slot.Input);
+            newNode.ValueChanged += (value) => slot.Result.Text = ComplexUtils.ToNiceString(value);
+            Dependencies.Add(newNode);
         }
 
         private void AddButton_Clicked()
@@ -128,6 +130,7 @@ namespace Bifurcation
 
         public void Remove(int K, int N)
         {
+            Dependencies.Remove($"P({K},{N})");
             for (int i = 0; i < Formulas.Count; i++)
             {
                 FormulaSlot slot = Formulas[i];

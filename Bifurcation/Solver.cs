@@ -10,7 +10,8 @@ namespace Bifurcation
         {
             EXPLICIT, IMPLICIT_2
         }
-        private static readonly int MAX_ITER = 10;
+        private static readonly int MAX_ITER = 4;
+        private static readonly double NORM_2 = 1 / (2 * Math.PI);
 
         // change if param was changed
         private bool Solved { get; set; }
@@ -39,7 +40,7 @@ namespace Bifurcation
             M = timeCount;
             this.T = T;
             xStep = 2 * Math.PI / N;
-            tStep = T / (M - 1);
+            tStep = T / M;
         }
 
         public void SetParams(ModelParams p)
@@ -98,7 +99,10 @@ namespace Bifurcation
             double sigma = D * tStep / (xStep * xStep);
             if (sigma > 0.5)
             {
+#if DEBUG
                 throw new Exception($"stability error: h={xStep:f4}, τ={tStep:f4}, 2Dτ/h^2={sigma:f4} > 1/2");
+#endif
+                return;
             }
 
             double[,] u = Solution;
@@ -179,6 +183,7 @@ namespace Bifurcation
                 if (asyncArg.Token.IsCancellationRequested)
                     return;
 
+                //double norm = CalcNorm(u_k);
                 var u_kl = u_k.Clone();
                 var U = AinvB * u_k;
                 u_k = 0.5 * u_k;
@@ -193,10 +198,17 @@ namespace Bifurcation
                         iFT[j] = K * iFT[j] * iFT[j];
                     }
                     var FP = Vec.DenseOfArray(iFT);
-                    //u_k = invAB * u_k + tauA * FP;
+
+                    //var old_u_kl = u_kl;
                     u_kl = U + tauAinv * FP;
 
                     // stop cond
+                    /*
+                    if (CalcNorm(u_kl - old_u_kl) < tStep * tStep * norm + xStep * xStep * 0.01)
+                    {
+                        Logger.Write(l.ToString() + " iterations");
+                        break;
+                    }*/
                 }
                 u_k = u_kl;
 
@@ -205,6 +217,16 @@ namespace Bifurcation
 
                 asyncArg.CalcProgress?.Report((k + 1) / kMax);
             }
+        }
+
+        private double CalcNorm(MathNet.Numerics.LinearAlgebra.Vector<double> v)
+        {
+            double res = 0;
+            int N = v.Count;
+            for (int i = 0; i < N; i++)
+                res += v[i] * v[i];
+            res *= NORM_2 / N;
+            return Math.Sqrt(res);
         }
     }
 }

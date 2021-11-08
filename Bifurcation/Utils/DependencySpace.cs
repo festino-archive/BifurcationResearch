@@ -47,6 +47,20 @@ namespace Bifurcation
             newNode.DependenciesChanged += (node, dep) => DependenciesChanged(node, dep);
         }
 
+        public void Remove(string name)
+        {
+            for (int i = 0; i < AllNodes.Count; i++)
+            {
+                DependencyNode node = AllNodes[i];
+                if (node.Name == name)
+                {
+                    AllNodes.RemoveAt(i);
+                    break;
+                }
+
+            }
+        }
+
         public void RemoveFilter()
         {
             string pattern = "P\\(*,*\\)"; // P(K,N)

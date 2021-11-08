@@ -14,6 +14,7 @@ namespace Bifurcation
         {
             Parser = new ExprParser();
             Parser.AddAliases(MathAliases.GetDefaultFunctions());
+            Parser.AddAlias(MathAliases.ConvertName("i"), 0);
             Parser.AddAlias(MathAliases.ConvertName("x"), 0);
             Parser.AddAlias(MathAliases.ConvertName("chi"), 0);
             Parser.AddAlias(MathAliases.ConvertName("rho"), 2);
@@ -62,8 +63,72 @@ namespace Bifurcation
         public static Complex Eval(IExpression expr, List<DependencyNode> dependencies)
         {
             expr = ExprUtils.GetCopy_Slow(expr);
+            foreach (DependencyNode dep in dependencies)
+            {
+                Complex val = dep.Value;
+                IExpression constExpr;
+                if (val.Imaginary == 0)
+                {
+                    constExpr = new ExprConst(val.Real.ToString("f15"));
+                }
+                else
+                {
+                    IExpression exprImg = new ExprMult(new ExprConst(val.Real.ToString("f15")), new ExprRegFunc("i", 0));
+                    if (val.Real == 0)
+                        constExpr = exprImg;
+                    else
+                        constExpr = new ExprSum(new ExprConst(val.Real.ToString("f15")), exprImg);
+                }
+                expr = ExprSimplifier.Substitute(expr, dep.Name, constExpr);
+            }
+            expr = ExprSimplifier.Simplify(expr);
+
+            //deal with static dependencies(chi?)
             //replace, considering functions
-            return 0;
+
+            if (expr is ExprConst)
+            {
+                return (expr as ExprConst).Value.ToDouble();
+            }
+            else if (expr is ExprMult)
+            {
+                ExprMult mult = expr as ExprMult;
+                double img = 0;
+                bool found = false;
+                foreach (IExpression e in mult.GetArgs())
+                    if (e is ExprConst)
+                        img = (e as ExprConst).Value.ToDouble();
+                    else if (e is ExprRegFunc && (e as ExprRegFunc).Name == "i")
+                        found = true;
+                if (found)
+                    return new Complex(0, img);
+            }
+            else if (expr is ExprSum)
+            {
+                ExprSum sum = expr as ExprSum;
+                bool foundReal = false;
+                bool foundImg = false;
+                double real = 0;
+                double img = 0;
+                foreach (IExpression eSum in sum.GetArgs())
+                    if (eSum is ExprConst)
+                    {
+                        real = (eSum as ExprConst).Value.ToDouble();
+                        foundReal = true;
+                    }
+                    else if (eSum is ExprMult)
+                    {
+                        ExprMult mult = eSum as ExprMult;
+                        foreach (IExpression e in mult.GetArgs())
+                            if (e is ExprConst)
+                                img = (e as ExprConst).Value.ToDouble();
+                            else if (e is ExprRegFunc && (e as ExprRegFunc).Name == "i")
+                                foundImg = true;
+                    }
+                if (foundReal && foundImg)
+                    return new Complex(real, img);
+            }
+            return Complex.NaN;
         }
 
         public static double EvalD(IExpression expr, List<DependencyNode> dependencies)

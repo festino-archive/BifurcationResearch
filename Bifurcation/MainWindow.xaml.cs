@@ -283,9 +283,28 @@ namespace Bifurcation
             double T = double.Parse(input_T.Text);
             //int M = int.Parse(input_M.Text);
             //int N = int.Parse(input_N.Text);
-            //double[,] sol = MainParser.EvalMatrixD(expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
-            double[,] sol = MainParser.EvalMatrixD(expr, Dependencies, deps, "t", T, VISUALIZATION_HEIGHT, "x", 2 * Math.PI, VISUALIZATION_WIDTH);
-            UpdateVisualization(sol);
+            int M = VISUALIZATION_HEIGHT;
+            int N = VISUALIZATION_WIDTH;
+
+            SwitchDrawButton(true);
+            calcBar.Value = 0;
+            var calcProgress = new Progress<double>(value => calcBar.Value = value);
+            ShowProgress();
+
+            Task.Run(() =>
+            {
+                AsyncArg arg = new AsyncArg(calcProgress, solveCancellation.Token);
+                //double[,] sol = MainParser.EvalMatrixD(token, expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
+                double[,] sol = MainParser.EvalMatrixD(arg, expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
+                if (arg.Token.IsCancellationRequested)
+                    return;
+
+                this.Dispatcher.Invoke(() =>
+                {
+                    UpdateVisualization(sol);
+                    SwitchDrawButton(false);
+                });
+            });
         }
 
         private async void drawButton_ClickAsync(object sender, RoutedEventArgs e)
@@ -305,8 +324,10 @@ namespace Bifurcation
 
             Task.Run(() =>
             {
-                AsyncArg asyncArg = new AsyncArg(method, calcProgress, solveCancellation.Token);
-                curSolver.Solve(asyncArg);
+                AsyncArg asyncArg = new AsyncArg(calcProgress, solveCancellation.Token);
+                curSolver.Solve(method, asyncArg);
+                if (asyncArg.Token.IsCancellationRequested)
+                    return;
 
                 this.Dispatcher.Invoke(() =>
                 {
@@ -326,7 +347,6 @@ namespace Bifurcation
 
             Solver newSolver;
             string errorElem = "";
-            double chi = 0;
             try
             {
                 int n = P.Size;
@@ -343,7 +363,7 @@ namespace Bifurcation
                 errorElem = "N";
                 int N = int.Parse(input_N.Text);
 
-                chi = Solver.GetChi(K, P[n, n], A0);
+                double chi = Solver.GetChi(K, P[n, n], A0);
                 Dependencies.Set(MathAliases.ConvertName("chi"), chi);
 
                 errorElem = "u0";

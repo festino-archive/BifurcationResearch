@@ -67,7 +67,7 @@ namespace Bifurcation
         public double GetX(int j) => j * xStep;
         public double GetT(int k) => k * tStep;
 
-        public void Solve(AsyncArg asyncArg)
+        public void Solve(Method method, AsyncArg asyncArg)
         {
             if (Solved)
                 return;
@@ -88,9 +88,9 @@ namespace Bifurcation
                 u[0, j] = weightSum;
             }
 
-            if (asyncArg.Method == Method.EXPLICIT)
+            if (method == Method.EXPLICIT)
                 SolveExplicit(asyncArg);
-            else if (asyncArg.Method == Method.IMPLICIT_2)
+            else if (method == Method.IMPLICIT_2)
                 SolveImplicit(asyncArg);
         }
         
@@ -136,7 +136,7 @@ namespace Bifurcation
                     u[k + 1, j] = u[k, j] + tStep * (Duxx - u[k, j] + F);
                 }
 
-                asyncArg.CalcProgress?.Report((k + 1) / kMax);
+                asyncArg.Progress?.Report((k + 1) / kMax);
             }
         }
 
@@ -215,7 +215,7 @@ namespace Bifurcation
                 for (int j = 0; j < N; j++)
                     u[k + 1, j] = u_k[j];
 
-                asyncArg.CalcProgress?.Report((k + 1) / kMax);
+                asyncArg.Progress?.Report((k + 1) / kMax);
             }
         }
 

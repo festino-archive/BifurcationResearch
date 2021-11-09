@@ -157,7 +157,7 @@ namespace Bifurcation
             return u0;
         }
 
-        public static double[,] EvalMatrixD(IExpression expr, DependencySpace depSpace, string[] deps,
+        public static double[,] EvalMatrixD(AsyncArg arg, IExpression expr, DependencySpace depSpace, string[] deps,
             string var1, double len1, int steps1, string var2, double len2, int steps2)
         {
             expr = ExprUtils.GetCopy_Slow(expr);
@@ -170,6 +170,9 @@ namespace Bifurcation
             double[,] res = new double[steps1, steps2]; // t, x
             for (int n = 0; n < steps1; n++)
             {
+                if (arg.Token.IsCancellationRequested)
+                    return null;
+
                 double v1 = len1 * n / steps1;
                 IExpression substituted1 = ExprSimplifier.Substitute(expr, var1, new ExprConst(v1.ToString("f15")));
                 for (int j = 0; j < steps2; j++)
@@ -179,6 +182,8 @@ namespace Bifurcation
                     substituted2 = ExprSimplifier.Simplify(substituted2);
                     res[n, j] = ExprDoubleSimplifier.CalcConstExpr(substituted2);
                 }
+
+                arg.Progress?.Report((n + 1) / (float)steps1);
             }
             return res;
         }

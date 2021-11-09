@@ -5,14 +5,12 @@ namespace Bifurcation
 {
     internal class AsyncArg
     {
-        public readonly Solver.Method Method;
-        public readonly IProgress<double> CalcProgress;
+        public readonly IProgress<double> Progress;
         public readonly CancellationToken Token;
 
-        public AsyncArg(Solver.Method method, IProgress<double> calcProgress, CancellationToken token)
+        public AsyncArg(IProgress<double> progress, CancellationToken token)
         {
-            Method = method;
-            CalcProgress = calcProgress;
+            Progress = progress;
             Token = token;
         }
     }

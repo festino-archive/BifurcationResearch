@@ -66,8 +66,7 @@
                 </Grid.ColumnDefinitions>
                 <Button x:Name="drawButton" Content="Draw" VerticalAlignment="Center" Margin="5,5,5,5" Padding="8,8,8,8" Click="drawButton_ClickAsync" HorizontalAlignment="Center"/>
                 <ProgressBar x:Name="calcBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,65,10,0" Maximum="1" Orientation="Horizontal"/>
-                <ProgressBar x:Name="drawBar" Height="7" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,95,10,0" Maximum="1" Orientation="Horizontal"/>
-
+                
                 <Grid x:Name="visContainer" Margin="10,10,50,10" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Hidden">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

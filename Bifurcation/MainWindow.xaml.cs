@@ -296,6 +296,32 @@ namespace Bifurcation
                 return;
             }
 
+            BuildSolver();
+
+            SwitchDrawButton(true);
+            calcBar.Value = 0;
+            var calcProgress = new Progress<double>(value => calcBar.Value = value);
+            ShowProgress();
+
+            Task.Run(() =>
+            {
+                AsyncArg asyncArg = new AsyncArg(method, calcProgress, solveCancellation.Token);
+                curSolver.Solve(asyncArg);
+
+                this.Dispatcher.Invoke(() =>
+                {
+                    textBlock_Khi.Text = "𝜒 = " + curSolver.Chi.ToString("f4");
+                    FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
+
+                    UpdateVisualization(curSolver.Solution);
+                    SwitchDrawButton(false);
+                });
+            });
+        }
+
+        private void BuildSolver()
+        {
+
             Filter P = filterBuilder.Filter;
 
             Solver newSolver;
@@ -331,30 +357,13 @@ namespace Bifurcation
                 newSolver = new Solver(P, T, N, M);
                 ModelParams param = new ModelParams(A0, K, u0, D);
                 newSolver.SetParams(param);
+                curSolver = newSolver;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.Write(errorElem + ": " + ex.Message);
                 return;
             }
-
-            calcBar.Value = drawBar.Value = 0;
-            ShowProgress();
-            SwitchDrawButton(true);
-
-            var calcProgress = new Progress<double>(value => calcBar.Value = value);
-            var drawProgress = new Progress<double>(value => drawBar.Value = value);
-            AsyncArg asyncArg = new AsyncArg(method, calcProgress, drawProgress, solveCancellation.Token);
-            newSolver.Solve(asyncArg);
-            if (asyncArg.Token.IsCancellationRequested)
-                return;
-
-            curSolver = newSolver;
-            textBlock_Khi.Text = "𝜒 = " + curSolver.Chi.ToString("f4");
-            FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
-
-            UpdateVisualization(curSolver.Solution);
-            SwitchDrawButton(false);
         }
 
         private void UpdateVisualization(double[,] solution)
@@ -377,10 +386,10 @@ namespace Bifurcation
         }
 
         private void ShowProgress() {
-            calcBar.Visibility = drawBar.Visibility = Visibility.Visible;
+            calcBar.Visibility = Visibility.Visible;
         }
         private void HideProgress() {
-            calcBar.Visibility = drawBar.Visibility = Visibility.Hidden;
+            calcBar.Visibility = Visibility.Hidden;
         }
 
         private void SwitchDrawButton(bool toWork)

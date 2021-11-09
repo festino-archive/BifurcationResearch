@@ -18,7 +18,7 @@ namespace Bifurcation
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static readonly int VISUALIZATION_WIDTH = 700, VISUALIZATION_HEIGHT = 200;
+        private static readonly int VISUALIZATION_WIDTH = 2100, VISUALIZATION_HEIGHT = 600;
 
         private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0, input_v;
         private RadioButtonGroup FilterModeGroup;

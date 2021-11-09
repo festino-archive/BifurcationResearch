@@ -1,8 +1,10 @@
 ﻿
 using HeatSim;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace Bifurcation
 {
@@ -157,7 +159,7 @@ namespace Bifurcation
             return u0;
         }
 
-        public static double[,] EvalMatrixD(AsyncArg arg, IExpression expr, DependencySpace depSpace, string[] deps,
+        public static double[,] EvalMatrixD_OneThread(AsyncArg arg, IExpression expr, DependencySpace depSpace, string[] deps,
             string var1, double len1, int steps1, string var2, double len2, int steps2)
         {
             expr = ExprUtils.GetCopy_Slow(expr);
@@ -186,6 +188,53 @@ namespace Bifurcation
                 arg.Progress?.Report((n + 1) / (float)steps1);
             }
             return res;
+        }
+
+        public static double[,] EvalMatrixD(AsyncArg arg, IExpression expr, DependencySpace depSpace, string[] deps,
+            string var1, double len1, int steps1, string var2, double len2, int steps2)
+        {
+            expr = ExprUtils.GetCopy_Slow(expr);
+            foreach (string dep in deps)
+            {
+                Complex? val = depSpace.Get(dep);
+                if (val.HasValue)
+                    expr = ExprSimplifier.Substitute(expr, dep, new ExprConst(val.Value.Real.ToString("f15")));
+            }
+            double[,] res = new double[steps1, steps2]; // t, x
+            int[] progress = new int[Environment.ProcessorCount];
+            int interval = (int)Math.Ceiling(steps1 / (double)progress.Length);
+            Parallel.For(0, progress.Length, (index) => EvalMatrixD(arg, expr, res, steps1, progress, index,
+                var1, len1 / steps1, index * interval, Math.Min((index + 1) * interval, steps1), var2, len2 / steps2, steps2));
+            return res;
+        }
+
+        private static void EvalMatrixD(AsyncArg arg, IExpression exprV1V2, double[,] res, int steps1, int[] progress, int index,
+            string var1, double step1, int start1, int end1, string var2, double step2, int steps2)
+        {
+            for (int n = start1; n < end1; n++)
+            {
+                if (arg.Token.IsCancellationRequested)
+                    return;
+
+                double v1 = step1 * n;
+                IExpression substituted1 = ExprSimplifier.Substitute(exprV1V2, var1, new ExprConst(v1.ToString("f15")));
+                for (int j = 0; j < steps2; j++)
+                {
+                    double v2 = step2 * j;
+                    IExpression substituted2 = ExprSimplifier.Substitute(substituted1, var2, new ExprConst(v2.ToString("f15")));
+                    substituted2 = ExprSimplifier.Simplify(substituted2);
+                    res[n, j] = ExprDoubleSimplifier.CalcConstExpr(substituted2);
+                }
+
+                lock (progress)
+                {
+                    progress[index]++;
+                    int steps = 0;
+                    foreach (int s in progress)
+                        steps += s;
+                    arg.Progress?.Report(steps / (float)steps1);
+                }
+            }
         }
     }
 }

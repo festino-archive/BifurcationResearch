@@ -10,6 +10,7 @@ namespace Bifurcation
     class Filter
     {
         private Complex[,] P;
+        public Complex[,] Matrix { get => P; }
         public int Size { get; private set; }
         public int FullSize { get; private set; }
 

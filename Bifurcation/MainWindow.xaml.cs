@@ -68,14 +68,12 @@ namespace Bifurcation
             SolutionInput defaultInput = new SolutionInput();
             defaultInput.SetInput(parameters);
 
-            Complex[,] P = new Complex[11, 11];
-            P[0, 0] = new Complex(0.2, -0.3);
-            P[10, 10] = new Complex(0.6, 0.3);
-            P[2, 2] = new Complex(0.4, -0.159);
-            P[8, 8] = new Complex(-0.4, -0.159);
-            FilterGrid filterGrid = new FilterGrid(filterPanel);
-            filterGrid.Set(P);
-            filterBuilder = filterGrid;
+            if (defaultInput.IsFilterGrid)
+            {
+                FilterGrid filterGrid = new FilterGrid(filterPanel);
+                filterGrid.Set(defaultInput.FilterGrid);
+                filterBuilder = filterGrid;
+            }
         }
 
         private void SolutionMethodChanged(int index)
@@ -254,8 +252,23 @@ namespace Bifurcation
             dialog.Filter = "yml files (*.yml)|*.yml|All files (*.*)|*.*";
             if (dialog.ShowDialog() == true)
             {
-                SolutionInput loaded = SolutionInput.FromFile(dialog.FileName);
-                loaded.SetInput(parameters);
+                SolutionInput input = SolutionInput.FromFile(dialog.FileName);
+                input.SetInput(parameters);
+
+                if (input.IsFilterGrid)
+                {
+                    Dependencies.RemoveFilter(); // TODO reduce extra code?
+                    FilterGrid filter = new FilterGrid(filterPanel);
+                    filter.Set(input.FilterGrid);
+                    filterBuilder = filter;
+                }
+                else
+                {
+                    Dependencies.RemoveFilter();
+                    FilterFormulas filter = new FilterFormulas(filterPanel, Dependencies);
+                    filter.Deserialize(input.FilterFormulas);
+                    filterBuilder = filter;
+                }
             }
         }
 
@@ -264,7 +277,7 @@ namespace Bifurcation
             SolutionInput res = new SolutionInput();
             foreach (UIParam param in parameters)
                 res.TrySet(param.Name, param.Text);
-            res.SetFilter(filterBuilder.Filter);
+            res.SetFilter(filterBuilder);
             return res;
         }
 

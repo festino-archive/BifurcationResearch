@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using static Bifurcation.GridUtils;
@@ -67,6 +68,11 @@ namespace Bifurcation
         {
             Holder.Children.Remove(Container);
             Builder.Remove(K, N);
+        }
+
+        internal void Remove()
+        {
+            Holder.Children.Remove(Container);
         }
     }
 }

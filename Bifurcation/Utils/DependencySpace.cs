@@ -63,7 +63,7 @@ namespace Bifurcation
 
         public void RemoveFilter()
         {
-            string pattern = "P\\(*,*\\)"; // P(K,N)
+            string pattern = @"P\([\d],[\d]\)"; // P(K,N)
             for (int i = AllNodes.Count - 1; i >= 0; i--)
             {
                 if (Regex.IsMatch(AllNodes[i].Name, pattern))

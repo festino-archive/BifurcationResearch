@@ -88,13 +88,14 @@ namespace Bifurcation
             elemPanel.Children.Add(AddPanel);
         }
 
-        private void AddSlot(int K, int N)
+        private FormulaSlot AddSlot(int K, int N)
         {
             FormulaSlot slot = new FormulaSlot(this, K, N, elemPanel);
             Formulas.Add(slot);
             DependencyNode newNode = new DependencyNode($"P({K},{N})", slot.Input);
             newNode.ValueChanged += (value) => slot.Result.Text = ComplexUtils.ToNiceString(value);
             Dependencies.Add(newNode);
+            return slot;
         }
 
         private void AddButton_Clicked()
@@ -137,9 +138,43 @@ namespace Bifurcation
                 if (slot.K == K && slot.N == N)
                 {
                     Formulas.RemoveAt(i);
+                    slot.Remove();
                     CheckIndices();
                     return;
                 }
+            }
+        }
+
+        public string Serialize()
+        {
+            string res = "";
+            foreach (FormulaSlot slot in Formulas)
+            {
+                if (res != "")
+                    res += "@";
+                string s = slot.Input.Text.Replace("@", "");
+                res += slot.K + "@" + slot.N + "@" + s;
+            }
+            return res;
+        }
+
+        public void Deserialize(string s)
+        {
+            for (int i = Formulas.Count - 1; i >= 0; i--)
+            {
+                FormulaSlot slot = Formulas[i];
+                Remove(slot.K, slot.N);
+            }
+
+            var l = s.Split('@');
+            for (int i = 0; i < l.Length; i += 3)
+            {
+                int K, N;
+                if (!int.TryParse(l[i], out K) || !int.TryParse(l[i + 1], out N))
+                    continue;
+                string text = l[i + 2];
+                var slot = AddSlot(K, N);
+                slot.Input.Text = text;
             }
         }
     }

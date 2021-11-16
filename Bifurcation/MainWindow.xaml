@@ -36,18 +36,31 @@
 
             <Grid Grid.Column="1" Margin="5,0,5,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="18"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="1*"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Fill mode:  "/>
-                    <RadioButton x:Name="matrixRadioButton" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="0,1,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Fill mode:  " VerticalAlignment="Center"/>
+                    <RadioButton x:Name="matrixRadioButton" Grid.Column="1" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="0,1,0,0">
                         matrix
                     </RadioButton>
-                    <RadioButton x:Name="formulaRadioButton" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="5,1,0,0">
+                    <RadioButton x:Name="formulaRadioButton" Grid.Column="2" GroupName="FillMode" VerticalAlignment="Center" Padding="1,-2,0,0" Margin="5,1,0,0">
                         formulas
                     </RadioButton>
-                </StackPanel>
+                    <Button x:Name="saveButton" HorizontalAlignment="Right" Grid.Column="3" Padding="3" MinWidth="50" Margin="8,0,0,0" Click="saveButton_Click">
+                        Save
+                    </Button>
+                    <Button x:Name="loadButton" HorizontalAlignment="Right" Grid.Column="4" Padding="3" MinWidth="50" Margin="8,0,0,0" Click="loadButton_Click">
+                        Load
+                    </Button>
+                </Grid>
                 <Grid x:Name="filterPanel" Grid.Row="1" Margin="0,5,0,0"/>
             </Grid>
 

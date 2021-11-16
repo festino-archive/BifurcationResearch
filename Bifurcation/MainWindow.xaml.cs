@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HeatSim;
-using static Bifurcation.GridUtils;
+using Microsoft.Win32;
 
 namespace Bifurcation
 {
@@ -20,7 +22,7 @@ namespace Bifurcation
     {
         private static readonly int VISUALIZATION_WIDTH = 2100, VISUALIZATION_HEIGHT = 600;
 
-        private TextBox input_D, input_A0, input_K, input_T, input_M, input_N, input_u0, input_v;
+        private List<UIParam> parameters = new List<UIParam>();
         private RadioButtonGroup FilterModeGroup;
         private RadioButtonGroup SolutionMethodGroup;
         private FilterBuilder filterBuilder;
@@ -53,16 +55,18 @@ namespace Bifurcation
             SolutionMethodGroup.Changed += SolutionMethodChanged;
 
             Dependencies = new DependencySpace();
-            input_D = AddParam("D", "0.01");
-            input_A0 = AddParam("A0", "1");
-            input_K = AddParam("K", "3.5");
-            input_T = AddParam("T", "120");
-            input_M = AddParam("time", "5000");
-            input_N = AddParam("spatial", "256");
-            input_u0 = AddParam("u0", "chi + 0.1 cos 5x");
+            AddParam("D", "D");
+            AddParam("A_0", "A0");
+            AddParam("K", "K");
+            AddParam("T", "T");
+            AddParam("t_count", "time");
+            AddParam("x_count", "spatial");
+            AddParam("u_0", "u0(x)");
             AddLabel("");
-            input_v = AddParam("v(x, t)", "chi + cos(0.1t) * cos 3x + sin(0.1t) * sin 3x");
-            AddButton("Draw", (a, b) => DrawExpectedSolution());
+            AddParam("v", "v(x, t)");
+            AddButton("Draw v(x,t)", (a, b) => DrawExpectedSolution());
+            SolutionInput defaultInput = new SolutionInput();
+            defaultInput.SetInput(parameters);
 
             Complex[,] P = new Complex[11, 11];
             P[0, 0] = new Complex(0.2, -0.3);
@@ -229,29 +233,46 @@ namespace Bifurcation
                 scopeCanvas.Visibility = Visibility.Hidden;
         }
 
-        private TextBox AddParam(string name, string defaultValue)
+        private void saveButton_Click(object sender, RoutedEventArgs e)
         {
-            Grid panel = new Grid();
-            panel.Margin = new Thickness(0, 5, 0, 5);
-            panel.ColumnDefinitions.Add(ColumnStarDefinition(1));
-            panel.ColumnDefinitions.Add(ColumnStarDefinition(1));
-            TextBlock label = new TextBlock
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.InitialDirectory = Directory.GetCurrentDirectory();
+            dialog.RestoreDirectory = true;
+            dialog.Filter = "yml files (*.yml)|*.yml|All files (*.*)|*.*";
+            if (dialog.ShowDialog() == true)
             {
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Text = name + " = "
-            };
-            TextBox input = new TextBox
-            {
-                MinWidth = 40,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = defaultValue
-            };
-            Grid.SetColumn(input, 1);
+                SolutionInput input = BuildInput();
+                input.Save(dialog.FileName);
+            }
+        }
 
-            panel.Children.Add(label);
-            panel.Children.Add(input);
-            paramPanel.Children.Add(panel);
-            return input;
+        private void loadButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.InitialDirectory = Directory.GetCurrentDirectory();
+            dialog.RestoreDirectory = true;
+            dialog.Filter = "yml files (*.yml)|*.yml|All files (*.*)|*.*";
+            if (dialog.ShowDialog() == true)
+            {
+                SolutionInput loaded = SolutionInput.FromFile(dialog.FileName);
+                loaded.SetInput(parameters);
+            }
+        }
+
+        private SolutionInput BuildInput()
+        {
+            SolutionInput res = new SolutionInput();
+            foreach (UIParam param in parameters)
+                res.TrySet(param.Name, param.Text);
+            res.SetFilter(filterBuilder.Filter);
+            return res;
+        }
+
+        private void AddParam(string name, string label)
+        {
+            UIParam param = new UIParam(name, label, "NaN");
+            paramPanel.Children.Add(param.Panel);
+            parameters.Add(param);
         }
 
         private void AddLabel(string text)
@@ -278,9 +299,10 @@ namespace Bifurcation
 
         private void DrawExpectedSolution()
         {
-            IExpression expr = MainParser.Parse(input_v.Text);
+            SolutionInput input = BuildInput();
+            IExpression expr = MainParser.Parse(input.v);
             string[] deps = MainParser.GetDependencies(expr);
-            double T = double.Parse(input_T.Text);
+            double T = double.Parse(input.T);
             //int M = int.Parse(input_M.Text);
             //int N = int.Parse(input_N.Text);
             int M = VISUALIZATION_HEIGHT;
@@ -294,7 +316,6 @@ namespace Bifurcation
             Task.Run(() =>
             {
                 AsyncArg arg = new AsyncArg(calcProgress, solveCancellation.Token);
-                //double[,] sol = MainParser.EvalMatrixD(token, expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
                 double[,] sol = MainParser.EvalMatrixD(arg, expr, Dependencies, deps, "t", T, M, "x", 2 * Math.PI, N);
                 if (arg.Token.IsCancellationRequested)
                     return;
@@ -342,8 +363,8 @@ namespace Bifurcation
 
         private void BuildSolver()
         {
-
-            Filter P = filterBuilder.Filter;
+            SolutionInput input = BuildInput();
+            Filter P = input.Filter;
 
             Solver newSolver;
             string errorElem = "";
@@ -351,23 +372,23 @@ namespace Bifurcation
             {
                 int n = P.Size;
                 errorElem = "D";
-                double D = double.Parse(input_D.Text);
+                double D = double.Parse(input.D);
                 errorElem = "A0";
-                Complex A0 = ComplexUtils.Parse(input_A0.Text);
+                Complex A0 = ComplexUtils.Parse(input.A_0);
                 errorElem = "K";
-                double K = double.Parse(input_K.Text);
+                double K = double.Parse(input.K);
                 errorElem = "T";
-                double T = double.Parse(input_T.Text);
+                double T = double.Parse(input.T);
                 errorElem = "M";
-                int M = int.Parse(input_M.Text);
+                int M = int.Parse(input.t_count);
                 errorElem = "N";
-                int N = int.Parse(input_N.Text);
+                int N = int.Parse(input.x_count);
 
                 double chi = Solver.GetChi(K, P[n, n], A0);
                 Dependencies.Set(MathAliases.ConvertName("chi"), chi);
 
                 errorElem = "u0";
-                IExpression expr = MainParser.Parse(input_u0.Text);
+                IExpression expr = MainParser.Parse(input.u_0);
                 textBlock_u0.Text = "u0 = " + expr.AsString();
 
                 string[] deps = MainParser.GetDependencies(expr);

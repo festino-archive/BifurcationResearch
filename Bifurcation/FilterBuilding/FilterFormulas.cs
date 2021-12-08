@@ -150,12 +150,15 @@ namespace Bifurcation
             string res = "";
             foreach (FormulaSlot slot in Formulas)
             {
-                if (res != "")
-                    res += "@";
-                string s = slot.Input.Text.Replace("@", "");
-                res += slot.K + "@" + slot.N + "@" + s;
+                res += Serialize(slot.K, slot.N, slot.Input.Text);
             }
             return res;
+        }
+
+        public static string Serialize(int K, int N, string input)
+        {
+            string s = input.Replace("@", "");
+            return K + "@" + N + "@" + s + "@";
         }
 
         public void Deserialize(string s)
@@ -167,7 +170,7 @@ namespace Bifurcation
             }
 
             var l = s.Split('@');
-            for (int i = 0; i < l.Length; i += 3)
+            for (int i = 0; i + 2 < l.Length; i += 3)
             {
                 int K, N;
                 if (!int.TryParse(l[i], out K) || !int.TryParse(l[i + 1], out N))

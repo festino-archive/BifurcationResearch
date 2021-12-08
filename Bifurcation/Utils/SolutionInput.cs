@@ -27,12 +27,12 @@ namespace Bifurcation
     {
         //default values
         public StringProperty D { get; private set; } = new StringProperty("D", "0.01");
-        public StringProperty K { get; private set; } = new StringProperty("K", "3.5");
+        public StringProperty K { get; private set; } = new StringProperty("K", "3.2");
         public StringProperty A_0 { get; private set; } = new StringProperty("A_0", "1");
         public StringProperty T { get; private set; } = new StringProperty("T", "120");
         public StringProperty t_count { get; private set; } = new StringProperty("t_count", "5000");
         public StringProperty x_count { get; private set; } = new StringProperty("x_count", "256");
-        public StringProperty u_0 { get; private set; } = new StringProperty("u_0", "chi + 0.1 cos 5x");
+        public StringProperty u_0 { get; private set; } = new StringProperty("u_0", "chi + 0.1 cos 2.5x");
         public StringProperty v { get; private set; } = new StringProperty("v", "chi + cos (3x - 0.1t)");
         private readonly List<StringProperty> Properties = new List<StringProperty>();
 
@@ -46,13 +46,123 @@ namespace Bifurcation
         {
             Properties.AddRange(new StringProperty[] { D, K, A_0, T, t_count, x_count, u_0, v });
 
-            Complex[,] P = new Complex[11, 11];
+            /*Complex[,] P = new Complex[11, 11];
             P[0, 0] = new Complex(0.2, -0.3);
             P[10, 10] = new Complex(0.6, 0.3);
             P[2, 2] = new Complex(0.4, -0.159);
-            P[8, 8] = new Complex(-0.4, -0.159);
+            P[8, 8] = new Complex(-0.4, -0.159);*/
+
+            /*Complex[,] P = new Complex[41, 41];
+            P[20 + 1, 20 + 1] = new Complex(-0.1, -0.1 / 3);
+            P[20 - 1, 20 - 1] = new Complex(-0.1, 0);
+            P[20 + 1, 20 - 1] = new Complex(-0.1, -0.3);
+            P[20 - 1, 20 + 1] = new Complex(-0.1, 0);
+            for (int i = 2; i <= 10; i++)
+            {
+                int n = 2 * i - 1;
+                double g = (1 + double.Parse(D.Value) * n * n) / (double.Parse(K.Value) * 1 * 1) / n;
+                if (i % 2 == 1)
+                    g *= -1;
+                //P[20 + n, 20+1] = new Complex(0, g / 4);
+                //P[20 + n, 20-1] = new Complex(0, g / 4);
+                //P[20 - n, 20+1] = new Complex(0, g / 4);
+                //P[20 - n, 20-1] = new Complex(0, g / 4);
+                P[20 + n, 20+1] = new Complex(0, g);
+            }
+
             FilterGrid = P;
-            IsFilterGrid = true;
+            IsFilterGrid = true;*/
+
+            /*int freak = 4;
+            int count = 10;
+            int size = freak * (2 * count - 1);
+            Complex[,] P = new Complex[1 + size * 2, 1 + size * 2];
+            int main = freak;
+            double c = double.Parse(K.Value) * 1 * 1;
+            double hat_c = (double.Parse(K.Value) - 0.1) * 1 * 1;
+            Complex beta = new Complex(0.2, -0.2);
+            Complex alpha = Complex.Conjugate(beta) - new Complex(0, (1 + double.Parse(D.Value) * main * main) / hat_c);
+            P[size + main, size + main] = alpha / 2;
+            P[size - main, size - main] = -Complex.Conjugate(alpha / 2);
+            P[size + main, size - main] = -Complex.Conjugate(beta / 2);
+            P[size - main, size + main] = beta / 2;
+            Logger.Write($"alpha_{main} = {alpha}, beta_{main} = {beta}");
+            Logger.Write($"rho_{main},{main} = {P[size + main, size + main]}, rho_{-main},{-main} = {P[size - main, size - main]}, " +
+                $"rho_{-main},{main} = {P[size - main, size + main]}, rho_{main},{-main} = {P[size + main, size - main]}");
+            for (int i = 2; i <= count; i++)
+            {
+                int n = 2 * i - 1;
+                int m = freak * n;
+                double g = (1 + double.Parse(D.Value) * m * m) / c / n;
+                if (i % 2 == 1)
+                    g *= -1;
+                P[size + m, size + main] = new Complex(0, g / 4);
+                P[size + m, size - main] = new Complex(0, g / 4);
+                P[size - m, size + main] = new Complex(0, g / 4);
+                P[size - m, size - main] = new Complex(0, g / 4);
+                Logger.Write($"rho_{m},{main} = {P[size + m, size + main]}, rho_{m},{-main} = {P[size + m, size - main]}, " +
+                    $"rho_{-m},{main} = {P[size - m, size + main]}, rho_{-m},{-main} = {P[size - m, size - main]}");
+            }
+
+            FilterGrid = P;
+            IsFilterGrid = true;*/
+
+            int freak = 4;
+            int count = 10;
+            int main = freak;
+            double c = double.Parse(K.Value) * 1 * 1;
+            double hat_c = (double.Parse(K.Value) - 0.1) * 1 * 1;
+            Complex beta = new Complex(0.2, -0.2);
+            Complex alpha = Complex.Conjugate(beta) - new Complex(0, (1 + double.Parse(D.Value) * main * main) / hat_c);
+            string serialized = "";
+            serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
+            serialized += Bifurcation.FilterFormulas.Serialize(-main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(alpha / 2)));
+            serialized += Bifurcation.FilterFormulas.Serialize(main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(beta / 2)));
+            serialized += Bifurcation.FilterFormulas.Serialize(-main, main, Workaround_ToParserNiceString(beta / 2));
+            Logger.Write($"alpha_{main} = {alpha}, beta_{main} = {beta}");
+            for (int i = 2; i <= count; i++)
+            {
+                int n = 2 * i - 1;
+                int m = freak * n;
+                double g = (1 + double.Parse(D.Value) * m * m) / c / n;
+                if (i % 2 == 1)
+                    g *= -1;
+
+                string gamma = Workaround_ToParserNiceString(new Complex(0, g / 4));
+                serialized += Bifurcation.FilterFormulas.Serialize(m, main, gamma);
+                serialized += Bifurcation.FilterFormulas.Serialize(m, -main, gamma);
+                serialized += Bifurcation.FilterFormulas.Serialize(-m, main, gamma);
+                serialized += Bifurcation.FilterFormulas.Serialize(-m, -main, gamma);
+            }
+
+            FilterFormulas = serialized;
+            IsFilterGrid = false;
+
+            string expected = "chi";
+            for (int i = 1; i < count; i++)
+            {
+                int n = 2 * i - 1;
+                int m = freak * n;
+                double g = 0.448 / n;
+                if (i % 2 == 0)
+                    g *= -1;
+
+                expected += " ";
+                if (g > 0)
+                    expected += "+";
+                expected += $"{g} cos({m}x)";
+            }
+            v.Value = expected;
+        }
+
+        private string Workaround_ToParserNiceString(Complex c)
+        {
+            string res = ComplexUtils.ToNiceString(c, 5);
+            if (c.Real == 0 && c.Imaginary > 0)
+                res = "0 + " + res;
+            if (c.Real == 0 && c.Imaginary < 0)
+                res = "0" + res;
+            return res;
         }
 
         public void SetFilter(FilterBuilder f)
@@ -143,6 +253,8 @@ namespace Bifurcation
             }
             else
             {
+                FilterFormulas builder = FilterBuilder as FilterFormulas;
+                FilterFormulas = builder.Serialize();
                 obj.Add("filter_type", "formulas");
                 obj.Add("filter", FilterFormulas);
             }

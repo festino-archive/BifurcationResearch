@@ -11,6 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DynamicDataDisplayWpf" Version="0.4.0" />
+    <PackageReference Include="InteractiveDataDisplay.WPF" Version="1.0.0" />
     <PackageReference Include="MathNet.Numerics" Version="4.15.0" />
     <PackageReference Include="YamlDotNet" Version="11.2.1" />
   </ItemGroup>

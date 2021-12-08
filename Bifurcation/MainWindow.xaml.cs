@@ -35,6 +35,8 @@ namespace Bifurcation
         private CancellationTokenSource solveCancellation = null;
         private Solver.Method method;
 
+        private PlotWindow plotWindow;
+
         public MainWindow()
         {
             Thread.CurrentThread.CurrentCulture = new CultureInfo("EN-US");
@@ -73,6 +75,12 @@ namespace Bifurcation
                 FilterGrid filterGrid = new FilterGrid(filterPanel);
                 filterGrid.Set(defaultInput.FilterGrid);
                 filterBuilder = filterGrid;
+            }
+            else
+            {
+                FilterFormulas filterFormulas = new FilterFormulas(filterPanel, Dependencies);
+                filterFormulas.Deserialize(defaultInput.FilterFormulas);
+                filterBuilder = filterFormulas;
             }
         }
 
@@ -437,6 +445,33 @@ namespace Bifurcation
 
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
+
+            RunPlotWindow(GetLastLayer(solution), "original");
+        }
+
+        private double[] GetLastLayer(double[,] solution)
+        {
+            int lastLayer = solution.GetLength(0) - 1;
+            if (lastLayer < 0)
+                return new double[0];
+
+            double[] res = new double[solution.GetLength(1)];
+            for (int i = 0; i < res.Length; i++)
+                res[i] = solution[lastLayer, i];
+            return res;
+        }
+
+        private void RunPlotWindow(double[] values, string title)
+        {
+            if (plotWindow == null || !plotWindow.IsLoaded) // https://stackoverflow.com/questions/381973/how-do-you-tell-if-a-wpf-window-is-closed
+            {
+                plotWindow = new PlotWindow();
+                plotWindow.Owner = this;
+            }
+
+            plotWindow.DrawLinePlot(0, 2 * Math.PI, values, title);
+
+            plotWindow.Show();
         }
 
         private void ShowProgress() {

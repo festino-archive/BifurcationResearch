@@ -18,18 +18,60 @@ namespace Bifurcation
             return 1 + GetConjugate(z);
         }
 
-        public static string ToNiceString(Complex z)
+        public static string ToNiceString(Complex z, int maxSignificantDigits = 15)
         {
             double real = z.Real;
             double img = z.Imaginary;
             string text = "";
             if (real != 0 || img == 0)
-                text += real.ToString();
-            if (img > 0)
-                text += " + " + img.ToString() + "i";
-            else if (img < 0)
-                text += " - " + (-img).ToString() + "i";
+                text += DoubleToString(real, maxSignificantDigits);
+            if (real != 0)
+            {
+                if (img > 0)
+                    text += " + " + DoubleToString(img, maxSignificantDigits) + "i";
+                else if (img < 0)
+                    text += " - " + DoubleToString(-img, maxSignificantDigits) + "i";
+            }
+            else
+            {
+                text += DoubleToString(img, maxSignificantDigits) + "i";
+            }
             return text;
+        }
+        private static string DoubleToString(double d, int digits)
+        {
+            string res = RoundToSignificantDigits(d, digits).ToString("f" + digits);
+            int dotIndex = res.IndexOf('.');
+            if (dotIndex > 0)
+            {
+                int index = dotIndex + 1;
+                while (index < res.Length && res[index] == '0')
+                    index++;
+                if (index == res.Length)
+                    return res.Substring(0, dotIndex);
+
+                int zeroIndex = res.IndexOf('0', index);
+                if (zeroIndex > 0)
+                    return res.Substring(0, zeroIndex);
+            }
+            return res;
+        }
+        // https://stackoverflow.com/a/374470
+        private static double RoundToSignificantDigits(double d, int digits)
+        {
+            if (d == 0)
+                return 0;
+
+            double scale = Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
+            return scale * Math.Round(d / scale, digits);
+        }
+        private static double TruncateToSignificantDigits(this double d, int digits)
+        {
+            if (d == 0)
+                return 0;
+
+            double scale = Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1 - digits);
+            return scale * Math.Truncate(d / scale);
         }
 
         public static Complex Parse(string number)
@@ -82,7 +124,11 @@ namespace Bifurcation
                 return index;
             char c = s[index];
             if (c == '+' || c == '-')
-                c = s[++index];
+            {
+                if (++index == s.Length)
+                    return index;
+                c = s[index];
+            }
             while ('0' <= c && c <= '9' || c == '.')
             {
                 if (++index == s.Length)

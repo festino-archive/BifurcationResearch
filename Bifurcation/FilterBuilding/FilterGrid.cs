@@ -8,9 +8,10 @@ namespace Bifurcation
 {
     class FilterGrid : FilterBuilder
     {
-        public readonly Brush COLOR_VALUE = new SolidColorBrush(Color.FromRgb(235, 255, 235));
         public readonly Brush COLOR_EMPTY = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        public readonly Brush COLOR_VALUE = new SolidColorBrush(Color.FromRgb(235, 255, 235));
         public readonly Brush COLOR_ERROR = new SolidColorBrush(Color.FromRgb(255, 230, 230));
+        public readonly int MAX_GRID_SIZE = 20;
 
         private TextBox sizeInput;
         private Grid matrixPanel;
@@ -55,7 +56,10 @@ namespace Bifurcation
         public void Set(Complex[,] P)
         {
             int fullSize = P.GetLength(0);
-            sizeInput.Text = ((fullSize - 1) / 2).ToString(); // cause Update()
+            int size = (fullSize - 1) / 2;
+            sizeInput.Text = size.ToString(); // cause Update()
+            if (Size != size)
+                Update(size);
             foreach (UIElement elem in matrixPanel.Children)
             {
                 int i = Grid.GetRow(elem) - 1;
@@ -154,7 +158,7 @@ namespace Bifurcation
             int res;
             if (!int.TryParse(textBox.Text, out res))
                 return;
-            if (res == Size || res > 20)
+            if (res == Size || res > MAX_GRID_SIZE)
                 return;
             Update(res);
         }

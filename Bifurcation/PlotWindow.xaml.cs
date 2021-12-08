@@ -1,4 +1,5 @@
-﻿using System;
+﻿using InteractiveDataDisplay.WPF;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -38,12 +39,7 @@ namespace Bifurcation
             double[] xs = Consecutive(pointCount, minX, (maxX - minX) / pointCount);
 
             colorIndex = (colorIndex + 1) % colors.Length;
-            var line = new InteractiveDataDisplay.WPF.LineGraph
-            {
-                Stroke = new SolidColorBrush(colors[colorIndex]),
-                Description = name,
-                StrokeThickness = 2
-            };
+            LineGraph line = AddLine(name, colors[colorIndex]);
 
             line.Plot(xs, values);
 
@@ -56,8 +52,40 @@ namespace Bifurcation
             myChart.LegendVisibility = Visibility.Visible;
         }
 
+        private LineGraph AddLine(string name, Color color)
+        {
+            LineGraph line = new LineGraph
+            {
+                Stroke = new SolidColorBrush(color),
+                Description = name,
+                StrokeThickness = 2
+            };
+
+            Button button = new Button
+            {
+                Content = "- " + name,
+                Foreground = new SolidColorBrush(color),
+                Margin = new Thickness(3),
+                Padding = new Thickness(3)
+            };
+            button.Click += (s, e) =>
+            {
+                RemoveLine(line);
+                stackPanel_LineButtons.Children.Remove(button);
+            };
+            stackPanel_LineButtons.Children.Add(button);
+
+            return line;
+        }
+
+        private void RemoveLine(LineGraph line)
+        {
+            myGrid.Children.Remove(line);
+        }
+
         public void Clear()
         {
+            stackPanel_LineButtons.Children.Clear();
             myGrid.Children.Clear();
             colorIndex = 0;
         }

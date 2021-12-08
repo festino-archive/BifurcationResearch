@@ -11,7 +11,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Button Name="button_ClearPlot" HorizontalAlignment="Center" Width="200" Padding="5" Margin="0 0 0 5" Click="button_ClearPlot_Click">Clear</Button>
+        <StackPanel Name="stackPanel_LineButtons" Orientation="Horizontal" VerticalAlignment="Center"/>
+        <Button Name="button_ClearPlot" HorizontalAlignment="Right" Width="100" Padding="5" Margin="0 0 0 5" Click="button_ClearPlot_Click">Clear</Button>
         <d3:Chart Name="myChart" Grid.Row="1">
             <Grid Name="myGrid"/>
         </d3:Chart>

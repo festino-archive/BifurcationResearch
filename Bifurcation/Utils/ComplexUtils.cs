@@ -32,7 +32,7 @@ namespace Bifurcation
                 else if (img < 0)
                     text += " - " + DoubleToString(-img, maxSignificantDigits) + "i";
             }
-            else
+            else if (img != 0)
             {
                 text += DoubleToString(img, maxSignificantDigits) + "i";
             }

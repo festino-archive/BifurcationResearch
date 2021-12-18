@@ -45,9 +45,9 @@ namespace Bifurcation
 
             myGrid.Children.Add(line);
 
-            myChart.Title = $"Line Plot ({pointCount:n0} points each)";
-            myChart.BottomTitle = $"Horizontal Axis Label";
-            myChart.LeftTitle = $"Vertical Axis Label";
+            myChart.Title = $"Графики ({pointCount:n0} точек по Ox)";
+            myChart.BottomTitle = $"Угол, радианы";
+            myChart.LeftTitle = $"Фазовая модуляция";
             myChart.IsAutoFitEnabled = true;
             myChart.LegendVisibility = Visibility.Visible;
         }

@@ -343,7 +343,7 @@ namespace Bifurcation
 
                 this.Dispatcher.Invoke(() =>
                 {
-                    UpdateVisualization(sol);
+                    UpdateVisualization(sol, "U(x,t)");
                     SwitchDrawButton(false);
                 });
             });
@@ -376,7 +376,7 @@ namespace Bifurcation
                     textBlock_Khi.Text = "𝜒 = " + curSolver.Chi.ToString("f4");
                     FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
 
-                    UpdateVisualization(curSolver.Solution);
+                    UpdateVisualization(curSolver.Solution, "u(x,T)");
                     SwitchDrawButton(false);
                 });
             });
@@ -428,7 +428,7 @@ namespace Bifurcation
             }
         }
 
-        private void UpdateVisualization(double[,] solution)
+        private void UpdateVisualization(double[,] solution, string name)
         {
             vis = new Visualization(solution, VISUALIZATION_WIDTH, VISUALIZATION_HEIGHT);
 
@@ -446,7 +446,7 @@ namespace Bifurcation
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
 
-            RunPlotWindow(GetLastLayer(solution), "original");
+            RunPlotWindow(GetLastLayer(solution), name);
         }
 
         private double[] GetLastLayer(double[,] solution)

@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Bifurcation" xmlns:d3="clr-namespace:InteractiveDataDisplay.WPF;assembly=InteractiveDataDisplay.WPF"
+        xmlns:local="clr-namespace:Bifurcation"
+        xmlns:d3="clr-namespace:InteractiveDataDisplay.WPF;assembly=InteractiveDataDisplay.WPF"
         mc:Ignorable="d"
         Title="PlotWindow" Height="450" Width="800">
     <Grid Margin="5">
@@ -13,6 +14,7 @@
         </Grid.RowDefinitions>
         <StackPanel Name="stackPanel_LineButtons" Orientation="Horizontal" VerticalAlignment="Center"/>
         <Button Name="button_ClearPlot" HorizontalAlignment="Right" Width="100" Padding="5" Margin="0 0 0 5" Click="button_ClearPlot_Click">Clear</Button>
+
         <d3:Chart Name="myChart" Grid.Row="1">
             <Grid Name="myGrid"/>
         </d3:Chart>

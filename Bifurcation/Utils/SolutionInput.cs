@@ -71,7 +71,22 @@ namespace Bifurcation
             }
 
             FilterGrid = P;
-            IsFilterGrid = true;*/
+            IsFilterGrid = true;
+
+            string expected = "chi";
+            for (int i = 1; i <= 10; i++)
+            {
+                int n = 2 * i - 1;
+                double g = 0.448 / n;
+                if (i % 2 == 0)
+                    g *= -1;
+
+                expected += " ";
+                if (g > 0)
+                    expected += "+";
+                expected += $"{g} cos({n}x)";
+            }
+            v.Value = expected;*/
 
             /*int freak = 4;
             int count = 10;
@@ -139,7 +154,7 @@ namespace Bifurcation
             IsFilterGrid = false;
 
             string expected = "chi";
-            for (int i = 1; i < count; i++)
+            for (int i = 1; i <= count; i++)
             {
                 int n = 2 * i - 1;
                 int m = freak * n;

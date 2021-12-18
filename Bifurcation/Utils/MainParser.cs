@@ -201,6 +201,32 @@ namespace Bifurcation
                     expr = ExprSimplifier.Substitute(expr, dep, new ExprConst(val.Value.Real.ToString("f15")));
             }
             double[,] res = new double[steps1, steps2]; // t, x
+
+            if (!ExprSimplifier.IsDependsOn(expr, var1))
+            {
+                double[] xArr = EvalArrayD(expr, depSpace, deps, var2, len2, steps2);
+                for (int j = 0; j < steps2; j++)
+                {
+                    for (int i = 0; i < steps1; i++)
+                    {
+                        res[i, j] = xArr[j];
+                    }
+                }
+                return res;
+            }
+            if (!ExprSimplifier.IsDependsOn(expr, var2))
+            {
+                double[] xArr = EvalArrayD(expr, depSpace, deps, var1, len1, steps1);
+                for (int i = 0; i < steps1; i++)
+                {
+                    for (int j = 0; j < steps2; j++)
+                    {
+                        res[i, j] = xArr[i];
+                    }
+                }
+                return res;
+            }
+
             int[] progress = new int[Environment.ProcessorCount];
             int interval = (int)Math.Ceiling(steps1 / (double)progress.Length);
             Parallel.For(0, progress.Length, (index) => EvalMatrixD(arg, expr, res, steps1, progress, index,

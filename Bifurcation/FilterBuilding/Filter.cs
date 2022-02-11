@@ -203,6 +203,19 @@ namespace Bifurcation
                 }
             }
             Matrix<Complex> mathSystem = Matrix<Complex>.Build.DenseOfArray(system);
+            if (mathSystem.Determinant().Magnitude.Equals(double.NaN))
+            {
+                Complex[] vres = new Complex[fullSize];
+                Complex[,] mres = new Complex[fullSize, fullSize];
+                for (int n = 0; n < fullSize; n++)
+                {
+                    vres[n] = 0;
+                    for (int m = 0; m < fullSize; m++)
+                        mres[m, n] = 0;
+                }
+                return Tuple.Create(vres, mres);
+            }
+
             Evd<Complex> eigen = mathSystem.Evd();
             Complex[] values = eigen.EigenValues.ToArray();
             Complex[,] vectors = eigen.EigenVectors.ToArray();

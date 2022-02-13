@@ -176,19 +176,40 @@ namespace Bifurcation
             IsFilterGrid = false;
 
             string expected = "chi";
-            for (int i = 1; i <= count; i++)
+            double CCC = (0.1125 / 0.379) * 0.448;
+            // cos (t + x) + 0.5 cos (t - x)
+            string expPn = $"{CCC * 1.5} cos ({freak}x)";
+            string expQn = $"0 - {CCC * 0.5} sin ({freak}x)";
+            for (int i = 2; i <= count; i++)
             {
                 int n = 2 * i - 1;
                 int m = freak * n;
-                double g = 0.448 / n;
+                /*Complex coef = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega);
+                coef = coef / coef.Magnitude;
+                double g = CCC / n;
+                if (i % 2 == 0)
+                    g *= -1;
+                double g1 = g * coef.Real;
+                double g2 = g * coef.Imaginary;
+
+                expected += " ";
+                //if (g > 0)
+                //    expected += "+";
+                //expected += $"{g} cos({m}x) * cos({omega}t)";
+                string g1Str = g1 < 0 ? $"0 - {-g1}" : $"{g1}";
+                string g2Str = g2 < 0 ? $"0 - {-g2}" : $"{g2}";
+                expPn += $"+ {g1Str} cos({m}x) - {g2Str} sin ({m}x)";
+                expQn += $"+ {g1Str} sin({m}x) + {g2Str} cos ({m}x)";*/
+                double g = CCC / n;
                 if (i % 2 == 0)
                     g *= -1;
 
-                expected += " ";
+                expPn += " ";
                 if (g > 0)
-                    expected += "+";
-                expected += $"{g} cos({m}x)";
+                    expPn += "+";
+                expPn += $"{g} cos({m}x)";
             }
+            expected += "+ (" + expPn + $") * cos ({omega}t) + (" + expQn + $") * sin ({omega}t)";
             v.Value = expected;
         }
 

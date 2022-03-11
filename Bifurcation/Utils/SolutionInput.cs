@@ -105,7 +105,7 @@ namespace Bifurcation
             {
                 int n = 2 * i - 1;
                 int m = freak * n;
-                double g = (1 + double.Parse(D.Value) * m * m) / c / n;
+                double g = (1 + double.Parse(D.Value) * m * m) / hat_c / n;
                 if (i % 2 == 1)
                     g *= -1;
 
@@ -146,10 +146,10 @@ namespace Bifurcation
             int main = freak;
             double c = double.Parse(K.Value) * 1 * 1;
             double hat_c = (double.Parse(K.Value) - 0.05) * 1 * 1;
-            Complex x_mN = Complex.FromPolarCoordinates(0.5, 0.0);
+            Complex x_mN = Complex.FromPolarCoordinates(0.99, 0.0);
             double omega = 1;
             Complex beta = 2 * omega / c * x_mN / (1 - x_mN * Complex.Conjugate(x_mN));
-            Complex alpha = Complex.Conjugate(beta) * x_mN + new Complex(omega / c, -(1 + double.Parse(D.Value) * main * main) / hat_c);
+            Complex alpha = Complex.Conjugate(beta) * x_mN + new Complex(omega / hat_c, -(1 + double.Parse(D.Value) * main * main) / hat_c);
             string serialized = "";
             serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
             serialized += Bifurcation.FilterFormulas.Serialize(-main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(alpha / 2)));
@@ -159,7 +159,7 @@ namespace Bifurcation
             {
                 int n = 2 * i - 1;
                 int m = freak * n;
-                Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / c / n;
+                Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / hat_c / n;
                 if (i % 2 == 1)
                     g *= -1;
 
@@ -178,28 +178,12 @@ namespace Bifurcation
             string expected = "chi";
             double CCC = (0.1125 / 0.379) * 0.448;
             // cos (t + x) + 0.5 cos (t - x)
-            string expPn = $"{CCC * 1.5} cos ({freak}x)";
-            string expQn = $"0 - {CCC * 0.5} sin ({freak}x)";
+            string expPn = $"{CCC * (1 + x_mN.Real)} cos ({freak}x)";
+            string expQn = $"0 - {CCC * (1 - x_mN.Real)} sin ({freak}x)";
             for (int i = 2; i <= count; i++)
             {
                 int n = 2 * i - 1;
                 int m = freak * n;
-                /*Complex coef = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega);
-                coef = coef / coef.Magnitude;
-                double g = CCC / n;
-                if (i % 2 == 0)
-                    g *= -1;
-                double g1 = g * coef.Real;
-                double g2 = g * coef.Imaginary;
-
-                expected += " ";
-                //if (g > 0)
-                //    expected += "+";
-                //expected += $"{g} cos({m}x) * cos({omega}t)";
-                string g1Str = g1 < 0 ? $"0 - {-g1}" : $"{g1}";
-                string g2Str = g2 < 0 ? $"0 - {-g2}" : $"{g2}";
-                expPn += $"+ {g1Str} cos({m}x) - {g2Str} sin ({m}x)";
-                expQn += $"+ {g1Str} sin({m}x) + {g2Str} cos ({m}x)";*/
                 double g = CCC / n;
                 if (i % 2 == 0)
                     g *= -1;
@@ -211,6 +195,120 @@ namespace Bifurcation
             }
             expected += "+ (" + expPn + $") * cos ({omega}t) + (" + expQn + $") * sin ({omega}t)";
             v.Value = expected;
+
+            /*
+            // hopf blinking halfs
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> fn0 = (n) => n == 1 ? 0.01 : 0;
+            Func<int, double> f = (n) => (n == 1 ? -0.01 : 0) + 2 * (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
+            Init(4, f, f0, f0, fn0, 20, 1);*/
+
+            /*
+            // central peaks
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> fn0 = (n) => n == 1 ? 0.01 : 0;
+            Func<int, double> f = (n) => (1 - 2 * (n % 2)) / (double)(n);
+            Init(4, f, f0, f0, fn0, 10, 1);*/
+
+            /*
+            // turing spikes
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> fn0 = (n) => n == 1 ? 0.005 : 0;
+            Func<int, double> f = (n) => ( n == 1 ? -0.005 : 0 + (1 - (n % 4) / 2) * (1 - 2 * (n % 2))) / (double)(n);
+            Init(4, f, f0, f0, fn0, 20, 1);
+            */
+
+            /*
+            // turing rolls
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> fn0 = (n) => n == 1 ? 0.995 : 0;
+            Func<int, double> f = (n) => (n == 1 ? 0.005 : 0 + (1 - (n % 4) / 2) * (1 - 2 * (n % 2))) / (double)(n);
+            Init(4, f, f0, f0, fn0, 20, 1);
+            */
+
+            /*
+            // central drifting roll
+            Func<int, double> f = (n) => (1 - 2 * (n % 2)) / (double)(n * n);
+            Func<int, double> mf = (n) => -(1 - 2 * (n % 2)) / (double)(n * n);
+            Init(4, f, f, f, mf);*/
+        }
+
+        private void Init(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
+        {
+            int main = step;
+            K.Value = K_hat.ToString();
+            double c_hat = K_hat * 1 * 1;
+            int s = 1;
+            Complex x_N = new Complex(a_n(s) + d_n(s), c_n(s) - b_n(s)) * 0.5;
+            Complex x_mN = new Complex(a_n(s) - d_n(s), c_n(s) + b_n(s)) * 0.5;
+            double omega = 1;
+            Complex x_N2 = x_N * Complex.Conjugate(x_N);
+            Complex x_mN2 = x_mN * Complex.Conjugate(x_mN);
+            Complex beta = 2 * omega / c_hat * Complex.Conjugate(x_N) * x_mN / (x_N2 - x_mN2);
+            Complex alpha = omega / c_hat * (x_N2 + x_mN2) / (x_N2 - x_mN2) - new Complex(0, (1 + double.Parse(D.Value) * main * main) / c_hat);
+            string serialized = "";
+            serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
+            serialized += Bifurcation.FilterFormulas.Serialize(-main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(alpha / 2)));
+            serialized += Bifurcation.FilterFormulas.Serialize(main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(beta / 2)));
+            serialized += Bifurcation.FilterFormulas.Serialize(-main, main, Workaround_ToParserNiceString(beta / 2));
+
+            bool useN = x_N.Magnitude > x_mN.Magnitude;
+            int column = useN ? main : -main;
+            Complex x_main = useN ? x_N : x_mN;
+
+            for (int n = 2; n <= count; n++)
+            {
+                int m = step * n;
+
+                Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / (Complex.ImaginaryOne * c_hat);
+                Complex g_m = new Complex(a_n(n) + d_n(n), c_n(s) - b_n(s)) * 0.5 * g / x_main;
+                Complex g_mm = new Complex(a_n(n) - d_n(n), c_n(s) + b_n(s)) * 0.5 * g / x_main;
+
+                string gamma_m = Workaround_ToParserNiceString(g_m);
+                string gamma_mm = Workaround_ToParserNiceString(g_mm);
+                if (g_m != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(m, column, gamma_m);
+                if (g_mm != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(-m, column, gamma_mm);
+            }
+
+            FilterFormulas = serialized;
+            IsFilterGrid = false;
+
+            string expected = "chi";
+            string expPn = $"{expAmpl * (x_N.Real + x_mN.Real)} cos ({step}x)";
+            string expQn = $"0 - {expAmpl * (x_N.Real - x_mN.Real)} sin ({step}x)";
+            for (int n = 2; n <= count; n++)
+            {
+                int m = step * n;
+                double a = expAmpl * a_n(n);
+                double b = expAmpl * b_n(n);
+                double c = expAmpl * c_n(n);
+                double d = expAmpl * d_n(n);
+
+                expPn += " ";
+                if (a > 0)
+                    expPn += "+ ";
+                if (a != 0)
+                    expPn += $"{a} cos({m}x)";
+                if (b > 0)
+                    expPn += " + ";
+                if (b != 0)
+                    expPn += $"{b} sin({m}x)";
+
+                expQn += " ";
+                if (c > 0)
+                    expPn += "+ ";
+                if (c != 0)
+                    expQn += $"{c} cos({m}x)";
+                if (d > 0)
+                    expPn += " + ";
+                if (d != 0)
+                    expQn += $"{d} sin({m}x)";
+
+            }
+            expected += "+ (" + expPn + $") * cos ({omega}t) + (" + expQn + $") * sin ({omega}t)";
+            v.Value = expected;
         }
 
         private string Workaround_ToParserNiceString(Complex c)
@@ -218,7 +316,7 @@ namespace Bifurcation
             string res = ComplexUtils.ToNiceString(c, 5);
             if (c.Real == 0 && c.Imaginary > 0)
                 res = "0 + " + res;
-            if (c.Real == 0 && c.Imaginary < 0)
+            if (c.Real == 0 && c.Imaginary < 0 || c.Real < 0 && c.Imaginary == 0)
                 res = "0" + res;
             return res;
         }

@@ -324,10 +324,15 @@ namespace Bifurcation
             IExpression expr = MainParser.Parse(input.v);
             string[] deps = MainParser.GetDependencies(expr);
             double T = double.Parse(input.T);
-            //int M = int.Parse(input_M.Text);
-            //int N = int.Parse(input_N.Text);
-            int M = VISUALIZATION_HEIGHT;
-            int N = VISUALIZATION_WIDTH;
+            int M = int.Parse(input.t_count);
+            int N = int.Parse(input.x_count);
+            if (M > VISUALIZATION_HEIGHT)
+                M = VISUALIZATION_HEIGHT;
+            if (N > VISUALIZATION_WIDTH)
+                N = VISUALIZATION_WIDTH;
+
+            if (Dependencies.Get(MathAliases.ConvertName("chi")) == null)
+                Dependencies.Set(MathAliases.ConvertName("chi"), 0);
 
             SwitchDrawButton(true);
             calcBar.Value = 0;

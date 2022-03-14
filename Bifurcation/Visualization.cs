@@ -37,15 +37,33 @@ namespace Bifurcation
             //double avg = solver.Chi;
             Min = double.MaxValue;
             Max = double.MinValue;
-            for (int j = 0; j < maxX; j++)
-                for (int k = 0; k < maxT; k += maxT - 1)
-                {
-                    double value = solution[k, j];
-                    if (Min > value)
-                        Min = value;
-                    if (Max < value)
-                        Max = value;
-                }
+            int T_SCAN_COUNT = 10;
+            int X_SCAN_COUNT = 10;
+            for (int k = 0; k < T_SCAN_COUNT; k++)
+            {
+                Bounds bounds = GetMinMaxForT(k * k);
+                if (Min > bounds.Min)
+                    Min = bounds.Min;
+                if (Max < bounds.Max)
+                    Max = bounds.Max;
+            }
+            for (int k = 0; k < T_SCAN_COUNT; k++)
+            {
+                Bounds bounds = GetMinMaxForT(-k * k);
+                if (Min > bounds.Min)
+                    Min = bounds.Min;
+                if (Max < bounds.Max)
+                    Max = bounds.Max;
+            }
+            for (int j = 0; j < maxX; j += maxX / X_SCAN_COUNT)
+            {
+                Bounds bounds = GetMinMaxForX(j);
+                if (Min > bounds.Min)
+                    Min = bounds.Min;
+                if (Max < bounds.Max)
+                    Max = bounds.Max;
+            }
+
             Average = (Min + Max) / 2;
             double ampl = (Max - Min) / 2;
             Rescale = MAX_RESCALE;
@@ -97,15 +115,8 @@ namespace Bifurcation
             }
 
             int k = TSize - 1;
-            double pmin = double.MaxValue, pmax = double.MinValue;
-            for (int j = 0; j < XSize; j++)
-            {
-                double v = solution[k, j];
-                if (pmin > v)
-                    pmin = v;
-                if (pmax < v)
-                    pmax = v;
-            }
+            Bounds bounds = GetMinMaxForT(k);
+            double pmin = bounds.Min, pmax = bounds.Max;
             double average = (pmax + pmin) / 2;
             double ampl = (pmax - pmin) / 2;
             double rescale = MAX_RESCALE;
@@ -198,6 +209,58 @@ namespace Bifurcation
         private int CalcStride(int width)
         {
             return (width * PixelFormats.Bgra32.BitsPerPixel + 7) / 8;
+        }
+
+        private class Bounds
+        {
+            public double Min, Max;
+
+            public Bounds(double min, double max)
+            {
+                this.Min = min;
+                this.Max = max;
+            }
+        }
+
+        private Bounds GetMinMaxForX(int j)
+        {
+            double min = double.MaxValue, max = double.MinValue;
+            int maxT = solution.GetLength(0);
+            int maxX = solution.GetLength(1);
+            if (j < 0)
+                j = maxX - j;
+            if (j >= maxX)
+                return new Bounds(min, max);
+
+            for (int k = 0; k < maxT; k += maxT - 1)
+            {
+                double value = solution[k, j];
+                if (min > value)
+                    min = value;
+                if (max < value)
+                    max = value;
+            }
+            return new Bounds(min, max);
+        }
+        private Bounds GetMinMaxForT(int k)
+        {
+            double min = double.MaxValue, max = double.MinValue;
+            int maxT = solution.GetLength(0);
+            int maxX = solution.GetLength(1);
+            if (k < 0)
+                k = maxT - k;
+            if (k >= maxT)
+                return new Bounds(min, max);
+
+            for (int j = 0; j < maxX; j++)
+            {
+                double value = solution[k, j];
+                if (min > value)
+                    min = value;
+                if (max < value)
+                    max = value;
+            }
+            return new Bounds(min, max);
         }
     }
 }

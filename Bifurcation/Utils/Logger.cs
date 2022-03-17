@@ -36,6 +36,10 @@ namespace Bifurcation
             foreach (object ob in arr)
                 Write(ob.ToString());
         }
+        public static void Write(Complex z)
+        {
+            Write(toString(z));
+        }
         public static void Write(Complex[] arr)
         {
             if (arr == null)

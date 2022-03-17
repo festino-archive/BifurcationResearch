@@ -91,14 +91,14 @@ namespace Bifurcation
             /*
             // turing halfs
             Func<int, double> f0 = (n) => 0;
-            Func<int, double> f = (n) => (n == 1 ? -0.01 : 0) + 2 * (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
+            Func<int, double> f = (n) => (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
             InitTuring(4, f, f0, new Complex(0.2, -0.2), 20, 1);*/
 
             /*
             // hopf blinking halfs
             Func<int, double> f0 = (n) => 0;
-            Func<int, double> fn0 = (n) => n == 1 ? 0.01 : 0;
-            Func<int, double> f = (n) => (n == 1 ? -0.01 : 0) + 2 * (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
+            Func<int, double> fn0 = (n) => n == 1 ? 0.1 : 0;
+            Func<int, double> f = (n) => (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
             InitHopf(4, f, f0, f0, fn0, 20, 1);*/
 
             /*
@@ -140,14 +140,14 @@ namespace Bifurcation
             c = (n) => (n == 1 ? -0.1 : 0) + 2 * (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
             InitHopf(4, a, f0, c, fn0, 20);*/
 
-            
+            /*
             // Blinking triangles
             Func<int, double> f0 = (n) => 0;
             Func<int, double> fn0 = (n) => n == 1 ? 0.26 : 0;
             Func<int, double> a = (n) => 0.8 * 2 * (n % 2) / (double)(n * n);
             Func<int, double> c = (n) => 0.8 * 2 * (n % 2) / (double)(n * n);
             InitHopf(4, a, f0, c, fn0, 20);
-
+            */
         }
 
         private void InitHopf(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
@@ -234,8 +234,8 @@ namespace Bifurcation
             K.Value = K_hat.ToString();
             double c_hat = K_hat * 1 * 1;
             int s = 1;
-            Complex x_N = new Complex(a_n(s), -b_n(s)) * 0.5;
-            Complex x_mN = new Complex(a_n(s), b_n(s)) * 0.5;
+            Complex x_N = new Complex(a_n(s), -b_n(s));
+            Complex x_mN = new Complex(a_n(s), b_n(s));
             Complex alpha = x_mN / x_N * Complex.Conjugate(beta) - (1 + double.Parse(D.Value) * main * main) / c_hat * Complex.ImaginaryOne;
             string serialized = "";
             serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
@@ -252,8 +252,8 @@ namespace Bifurcation
                 int m = step * n;
 
                 Complex g = (1 + double.Parse(D.Value) * m * m) / (Complex.ImaginaryOne * c_hat);
-                Complex g_m = new Complex(a_n(n), -b_n(n)) * 0.5 * g / x_main;
-                Complex g_mm = new Complex(a_n(n), b_n(n)) * 0.5 * g / x_main;
+                Complex g_m = 0.5 * g * new Complex(a_n(n), -b_n(n)) / x_main;
+                Complex g_mm = 0.5 * g * new Complex(a_n(n), b_n(n)) / x_main;
 
                 string gamma_m = Workaround_ToParserNiceString(g_m);
                 string gamma_mm = Workaround_ToParserNiceString(g_mm);

@@ -150,22 +150,6 @@ namespace Bifurcation
             */
 
             /*
-            // cosining cosines test - cos(2x) cos(t) - cos(4x) sin(t)
-            Func<int, double> f0 = (n) => 0;
-            Func<int, double> a = (n) => n == 2 ? 1 : 0;
-            Func<int, double> c = (n) => n == 4 ? 0.5 : 0;
-            InitHopfDouble(2, a, f0, c, f0, 4);
-            K.Value = "2.1";
-            u_0.Value = "chi + 0.1 cos(2x)";*/
-            /*
-            // cosining cosines - cos(t + 2.4048256 cos(2x))
-            Func<int, double> f0 = (n) => 0;
-            Func<int, double> a = (n) => n == 4 ? -0.432 : (n == 8 ? 0.065 : (n == 12 ? -0.003 : 0));
-            Func<int, double> c = (n) => n == 2 ? -0.519 : (n == 6 ? 0.199 : (n == 10 ? -0.016 : 0));
-            InitHopfDouble(2, a, f0, c, f0, 12);
-            K.Value = "2.1";
-            u_0.Value = "chi + 0.1 cos(2x)";*/
-
             // simple test
             Func<int, double> f0 = (n) => 0;
             Func<int, double> a = (n) => n == 2 ? -0.2 : (n == 6 ? 0.5 : 0);
@@ -173,7 +157,30 @@ namespace Bifurcation
             Func<int, double> c = (n) => n == 4 ? -0.2 : 0;
             InitHopfDouble(2, a, f0, c, f0, 12, 1, 1);
             K.Value = "2.1";
+            u_0.Value = "chi + 0.1 cos(4x)";*/
+            /*
+            // cosining cosines test - cos(2x) cos(t) - cos(4x) sin(t)
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> a = (n) => n == 2 ? 1 : 0;
+            Func<int, double> c = (n) => n == 4 ? 0.5 : 0;
+            InitHopfDouble(2, a, f0, c, f0, 4);
+            K.Value = "2.1";
+            u_0.Value = "chi + 0.1 cos(2x)";*/
+            
+            // cosining cosines - cos(t + 2.4048256 cos(2x))
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> a = (n) => n == 4 ? -0.432 : (n == 8 ? 0.065 : (n == 12 ? -0.003 : 0));
+            Func<int, double> c = (n) => n == 2 ? -0.519 : (n == 6 ? 0.199 : (n == 10 ? -0.016 : 0));
+            InitHopfDouble(2, a, f0, c, f0, 6);
+            K.Value = "2.01";
             u_0.Value = "chi + 0.1 cos(4x)";
+
+            /*Func<int, double> f0 = (n) => 0;
+            Func<int, double> a = (n) => n == 2 ? -0.1 : (n == 6 ? 1 : 0);
+            Func<int, double> c = (n) => n == 4 ? -0.1 : 0;
+            InitHopfDouble(2, a, f0, c, f0, 12, 1, 1);
+            K.Value = "2.01";
+            u_0.Value = "chi + 0.02 cos(4x)";*/
         }
 
         private void InitTuring(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, int step = 1, double expAmpl = 0.125)
@@ -379,14 +386,41 @@ namespace Bifurcation
             serialized += Bifurcation.FilterFormulas.Serialize(mainM, mainN, Workaround_ToParserNiceString(gammaMN));
             serialized += Bifurcation.FilterFormulas.Serialize(-mainM, mainN, Workaround_ToParserNiceString(gammaMmN));
 
-            bool useN = x_N.Magnitude > x_M.Magnitude && x_N.Magnitude > x_mM.Magnitude || x_mN.Magnitude > x_M.Magnitude && x_mN.Magnitude > x_mM.Magnitude;
-            bool usem = useN ? x_mN.Magnitude > x_mN.Magnitude : x_mM.Magnitude > x_M.Magnitude;
-            int column = useN ? (usem ? -mainN : mainN) : (usem ? -mainM : mainM);
-            Complex x_main = useN ? (usem ? x_mN : x_N) : (usem ? x_mM : x_M);
+            bool usemN = x_mN.Magnitude > x_N.Magnitude ;
+            bool usemM = x_mM.Magnitude > x_M.Magnitude;
+            Complex x_Nmain = usemN ? x_mN : x_N;
+            Complex x_Mmain = usemM ? x_mM : x_M;
+            int columnN = usemN ? -mainN : mainN;
+            int columnM = usemM ? -mainM : mainM;
 
             for (int n = Math.Max(mainM, mainN) + 1; n <= count; n++)
             {
                 int m = step * n;
+                Complex x_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5;
+                Complex x_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5;
+                //Complex x_mm = Complex.Conjugate(x_m);
+
+                Complex g_N = (1 + double.Parse(D.Value) * m * m) / (Complex.ImaginaryOne * c_hat);
+                Complex g_m_N = g_N * x_m.Real / x_Nmain;
+                Complex g_mm_N = g_N * x_mm.Real / x_Nmain;
+
+                Complex g_M = omega / c_hat;
+                Complex g_m_M = g_M * x_m.Imaginary / x_Mmain;
+                Complex g_mm_M = -g_M * x_mm.Imaginary / x_Mmain;
+
+                string gamma_m_N = Workaround_ToParserNiceString(g_m_N);
+                string gamma_mm_N = Workaround_ToParserNiceString(g_mm_N);
+                if (g_m_N != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(m, columnN, gamma_m_N);
+                if (g_mm_N != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnN, gamma_mm_N);
+
+                string gamma_m_M = Workaround_ToParserNiceString(g_m_M);
+                string gamma_mm_M = Workaround_ToParserNiceString(g_mm_M);
+                if (g_m_M != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(m, columnM, gamma_m_M);
+                if (g_mm_M != 0)
+                    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnM, gamma_mm_M);
 
                 /*Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / (Complex.ImaginaryOne * c_hat);
                 Complex g_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5 * g / x_main;

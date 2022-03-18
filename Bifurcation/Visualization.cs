@@ -37,25 +37,7 @@ namespace Bifurcation
             //double avg = solver.Chi;
             Min = double.MaxValue;
             Max = double.MinValue;
-            int T_SCAN_COUNT = 10;
-            int X_SCAN_COUNT = 10;
-            for (int k = 0; k < T_SCAN_COUNT; k++)
-            {
-                Bounds bounds = GetMinMaxForT(k * k);
-                if (Min > bounds.Min)
-                    Min = bounds.Min;
-                if (Max < bounds.Max)
-                    Max = bounds.Max;
-            }
-            for (int k = 0; k < T_SCAN_COUNT; k++)
-            {
-                Bounds bounds = GetMinMaxForT(-k * k);
-                if (Min > bounds.Min)
-                    Min = bounds.Min;
-                if (Max < bounds.Max)
-                    Max = bounds.Max;
-            }
-            for (int j = 0; j < maxX; j += maxX / X_SCAN_COUNT)
+            for (int j = 0; j < maxX; j++)
             {
                 Bounds bounds = GetMinMaxForX(j);
                 if (Min > bounds.Min)
@@ -232,7 +214,7 @@ namespace Bifurcation
             if (j >= maxX)
                 return new Bounds(min, max);
 
-            for (int k = 0; k < maxT; k += maxT - 1)
+            for (int k = 0; k < maxT; k++)
             {
                 double value = solution[k, j];
                 if (min > value)

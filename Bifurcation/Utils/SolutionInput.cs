@@ -171,7 +171,7 @@ namespace Bifurcation
             Func<int, double> f0 = (n) => 0;
             Func<int, double> a = (n) => n == 4 ? -0.432 : (n == 8 ? 0.065 : (n == 12 ? -0.003 : 0));
             Func<int, double> c = (n) => n == 2 ? -0.519 : (n == 6 ? 0.199 : (n == 10 ? -0.016 : 0));
-            InitHopfDouble(2, a, f0, c, f0, 6);
+            InitHopfDouble(2, a, f0, c, f0, 12);
             K.Value = "2.01";
             u_0.Value = "chi + 0.1 cos(4x)";
 
@@ -297,7 +297,8 @@ namespace Bifurcation
                 double c = expAmpl * c_n(n);
                 double d = expAmpl * d_n(n);
 
-                expPn += " ";
+                if (a != 0 || b != 0)
+                    expPn += " ";
                 if (a > 0)
                     expPn += "+ ";
                 if (a != 0)
@@ -307,7 +308,8 @@ namespace Bifurcation
                 if (b != 0)
                     expPn += $"{b} sin({m}x)";
 
-                expQn += " ";
+                if (c != 0 || d != 0)
+                    expQn += " ";
                 if (c > 0)
                     expQn += "+ ";
                 if (c != 0)
@@ -386,7 +388,7 @@ namespace Bifurcation
             serialized += Bifurcation.FilterFormulas.Serialize(mainM, mainN, Workaround_ToParserNiceString(gammaMN));
             serialized += Bifurcation.FilterFormulas.Serialize(-mainM, mainN, Workaround_ToParserNiceString(gammaMmN));
 
-            bool usemN = x_mN.Magnitude > x_N.Magnitude ;
+            bool usemN = x_mN.Magnitude > x_N.Magnitude;
             bool usemM = x_mM.Magnitude > x_M.Magnitude;
             Complex x_Nmain = usemN ? x_mN : x_N;
             Complex x_Mmain = usemM ? x_mM : x_M;
@@ -400,47 +402,30 @@ namespace Bifurcation
                 Complex x_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5;
                 //Complex x_mm = Complex.Conjugate(x_m);
 
-                Complex g_N = (1 + double.Parse(D.Value) * m * m) / (Complex.ImaginaryOne * c_hat);
-                Complex g_m_N = g_N * x_m.Real / x_Nmain;
-                Complex g_mm_N = g_N * x_mm.Real / x_Nmain;
+                double D_n = (1 + double.Parse(D.Value) * m * m) / c_hat;
+                double omega_n = omega / c_hat;
 
-                Complex g_M = omega / c_hat;
-                Complex g_m_M = g_M * x_m.Imaginary / x_Mmain;
-                Complex g_mm_M = -g_M * x_mm.Imaginary / x_Mmain;
+                Complex g_N = -D_n * (a_n(n) + b_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (d_n(n) + c_n(n) * Complex.ImaginaryOne) * 0.5;
+                Complex g_m_N = g_N / x_Nmain;
+                //Complex g_mm_N = g_N * x_mm / x_Nmain;
+
+                Complex g_M = D_n * (c_n(n) - d_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (a_n(n) - b_n(n) * Complex.ImaginaryOne) * 0.5;
+                Complex g_m_M = g_M / x_Mmain;
+                //Complex g_mm_M = g_M * x_mm / x_Mmain;
 
                 string gamma_m_N = Workaround_ToParserNiceString(g_m_N);
-                string gamma_mm_N = Workaround_ToParserNiceString(g_mm_N);
+                //string gamma_mm_N = Workaround_ToParserNiceString(g_mm_N);
                 if (g_m_N != 0)
                     serialized += Bifurcation.FilterFormulas.Serialize(m, columnN, gamma_m_N);
-                if (g_mm_N != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnN, gamma_mm_N);
+                //if (g_mm_N != 0)
+                //    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnN, gamma_mm_N);
 
                 string gamma_m_M = Workaround_ToParserNiceString(g_m_M);
-                string gamma_mm_M = Workaround_ToParserNiceString(g_mm_M);
+                //string gamma_mm_M = Workaround_ToParserNiceString(g_mm_M);
                 if (g_m_M != 0)
                     serialized += Bifurcation.FilterFormulas.Serialize(m, columnM, gamma_m_M);
-                if (g_mm_M != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnM, gamma_mm_M);
-
-                /*Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / (Complex.ImaginaryOne * c_hat);
-                Complex g_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5 * g / x_main;
-                Complex g_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5 * g / x_main;
-
-                string gamma_m = Workaround_ToParserNiceString(g_m);
-                string gamma_mc = Workaround_ToParserNiceString(-Complex.Conjugate(g_m));
-                string gamma_mm = Workaround_ToParserNiceString(g_mm * Complex.ImaginaryOne);
-                if (g_m != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, column, gamma_m);
-                if (g_m != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, -column, gamma_mc);*/
-                //if (g_mm != 0)
-                //    serialized += Bifurcation.FilterFormulas.Serialize(-m, column, gamma_mm);
-                /*
-                string gamma_mmc = Workaround_ToParserNiceString(-Complex.Conjugate(g_mm * Complex.ImaginaryOne));
-                if (g_m != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, -column, gamma_mc);
-                if (g_mm != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, -column, gamma_mmc);*/
+                //if (g_mm_M != 0)
+                //    serialized += Bifurcation.FilterFormulas.Serialize(-m, columnM, gamma_mm_M);
             }
 
             FilterFormulas = serialized;
@@ -457,7 +442,8 @@ namespace Bifurcation
                 double c = expAmpl * c_n(n);
                 double d = expAmpl * d_n(n);
 
-                expPn += " ";
+                if (a != 0 || b != 0)
+                    expPn += " ";
                 if (a > 0)
                     expPn += "+ ";
                 if (a != 0)
@@ -467,7 +453,8 @@ namespace Bifurcation
                 if (b != 0)
                     expPn += $"{b} sin({m}x)";
 
-                expQn += " ";
+                if (c != 0 || d != 0)
+                    expQn += " ";
                 if (c > 0)
                     expQn += "+ ";
                 if (c != 0)

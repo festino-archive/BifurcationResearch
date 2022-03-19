@@ -415,45 +415,30 @@ namespace Bifurcation
 
         private string SerializeAlphaBeta(int n, Complex alpha_n, Complex beta_n, bool symmetrize)
         {
-            string res = "";
             if (symmetrize)
-            {
-                if (alpha_n != 0)
-                {
-                    res += Bifurcation.FilterFormulas.Serialize(n, n, Workaround_ToParserNiceString(alpha_n / 2));
-                    res += Bifurcation.FilterFormulas.Serialize(-n, -n, Workaround_ToParserNiceString(-Complex.Conjugate(alpha_n / 2)));
-                }
-                if (beta_n != 0)
-                {
-                    res += Bifurcation.FilterFormulas.Serialize(-n, n, Workaround_ToParserNiceString(beta_n / 2));
-                    res += Bifurcation.FilterFormulas.Serialize(n, -n, Workaround_ToParserNiceString(-Complex.Conjugate(beta_n / 2)));
-                }
-            }
+                return SerializeFilterCoef(n, n, alpha_n, 0.0) + SerializeFilterCoef(-n, n, beta_n, 0.0);
             else
-            {
-                if (alpha_n != 0)
-                    res += Bifurcation.FilterFormulas.Serialize(n, n, Workaround_ToParserNiceString(alpha_n));
-                if (beta_n != 0)
-                    res += Bifurcation.FilterFormulas.Serialize(-n, n, Workaround_ToParserNiceString(beta_n));
-            }
-            return res;
+                return SerializeFilterCoef(n, n, alpha_n, 1.0) + SerializeFilterCoef(-n, n, beta_n, 1.0);
         }
-
         private string SerializeGammaMN(int m, int n, Complex gamma_mn, bool symmetrize)
         {
-            string res = "";
             if (symmetrize)
-            {
-                if (gamma_mn != 0)
-                {
-                    res += Bifurcation.FilterFormulas.Serialize(m, n, Workaround_ToParserNiceString(gamma_mn / 2));
-                    res += Bifurcation.FilterFormulas.Serialize(-m, -n, Workaround_ToParserNiceString(-Complex.Conjugate(gamma_mn / 2)));
-                }
-            }
+                return SerializeFilterCoef(m, n, gamma_mn, 0.0);
             else
+                return SerializeFilterCoef(m, n, gamma_mn, 1.0);
+        }
+        private string SerializeFilterCoef(int m, int n, Complex coef_mn, double p_over_m)
+        {
+            string res = "";
+            if (coef_mn != 0)
             {
-                if (gamma_mn != 0)
-                    res += Bifurcation.FilterFormulas.Serialize(m, n, Workaround_ToParserNiceString(gamma_mn));
+                double p_over_half = 0.5 * p_over_m;
+                double pCoef = 0.5 + p_over_half;
+                double mCoef = 0.5 - p_over_half;
+                if (pCoef != 0)
+                    res += Bifurcation.FilterFormulas.Serialize(m, n, Workaround_ToParserNiceString(pCoef * coef_mn));
+                if (mCoef != 0)
+                    res += Bifurcation.FilterFormulas.Serialize(-m, -n, Workaround_ToParserNiceString(mCoef * -Complex.Conjugate(coef_mn)));
             }
             return res;
         }

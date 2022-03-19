@@ -193,10 +193,7 @@ namespace Bifurcation
             Complex x_mN = new Complex(a_n(s), b_n(s));
             Complex alpha = x_mN / x_N * Complex.Conjugate(beta) - (1 + double.Parse(D.Value) * main * main) / c_hat * Complex.ImaginaryOne;
             string serialized = "";
-            serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
-            serialized += Bifurcation.FilterFormulas.Serialize(-main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(alpha / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(beta / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(-main, main, Workaround_ToParserNiceString(beta / 2));
+            serialized += SerializeAlphaBeta(main, alpha, beta, true);
 
             bool useN = x_N.Magnitude > x_mN.Magnitude;
             int column = useN ? main : -main;
@@ -210,38 +207,14 @@ namespace Bifurcation
                 Complex g_m = 0.5 * g * new Complex(a_n(n), -b_n(n)) / x_main;
                 Complex g_mm = 0.5 * g * new Complex(a_n(n), b_n(n)) / x_main;
 
-                string gamma_m = Workaround_ToParserNiceString(g_m);
-                string gamma_mm = Workaround_ToParserNiceString(g_mm);
-                if (g_m != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, column, gamma_m);
-                if (g_mm != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, column, gamma_mm);
+                serialized += SerializeGammaMN(m, column, g_m, false);
+                serialized += SerializeGammaMN(-m, column, g_mm, false);
             }
 
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            string expected = "chi";
-            string expPn = $"{expAmpl * (x_N.Real + x_mN.Real)} cos ({step}x)";
-            for (int n = 2; n <= count; n++)
-            {
-                int m = step * n;
-                double a = expAmpl * a_n(n);
-                double b = expAmpl * b_n(n);
-
-                expPn += " ";
-                if (a > 0)
-                    expPn += "+ ";
-                if (a != 0)
-                    expPn += $"{a} cos({m}x)";
-                if (b > 0)
-                    expPn += " + ";
-                if (b != 0)
-                    expPn += $"{b} sin({m}x)";
-
-            }
-            expected += $"+ {expPn}";
-            v.Value = expected;
+            InitExpectedTuring(a_n, b_n, count, step, expAmpl);
         }
 
         private void InitHopfSingle(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
@@ -258,10 +231,7 @@ namespace Bifurcation
             Complex beta = 2 * omega / c_hat * Complex.Conjugate(x_N) * x_mN / (x_N2 - x_mN2);
             Complex alpha = omega / c_hat * (x_N2 + x_mN2) / (x_N2 - x_mN2) - (1 + double.Parse(D.Value) * main * main) / c_hat * Complex.ImaginaryOne;
             string serialized = "";
-            serialized += Bifurcation.FilterFormulas.Serialize(main, main, Workaround_ToParserNiceString(alpha / 2));
-            serialized += Bifurcation.FilterFormulas.Serialize(-main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(alpha / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(main, -main, Workaround_ToParserNiceString(-Complex.Conjugate(beta / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(-main, main, Workaround_ToParserNiceString(beta / 2));
+            serialized += SerializeAlphaBeta(main, alpha, beta, true);
 
             bool useN = x_N.Magnitude > x_mN.Magnitude;
             int column = useN ? main : -main;
@@ -275,18 +245,14 @@ namespace Bifurcation
                 Complex g_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5 * g / x_main;
                 Complex g_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5 * g / x_main;
 
-                string gamma_m = Workaround_ToParserNiceString(g_m);
-                string gamma_mm = Workaround_ToParserNiceString(g_mm);
-                if (g_m != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, column, gamma_m);
-                if (g_mm != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, column, gamma_mm);
+                serialized += SerializeGammaMN(m, column, g_m, false);
+                serialized += SerializeGammaMN(-m, column, g_mm, false);
             }
 
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            InitHopfExpected(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
+            InitExpectedHopf(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
         }
 
         private void InitHopfDouble(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
@@ -337,23 +303,12 @@ namespace Bifurcation
             Complex gammaMmN = (x_N / x_mN) * gammaMN;
 
             string serialized = "";
-            /*serialized += Bifurcation.FilterFormulas.Serialize(mainN, mainN, Workaround_ToParserNiceString(alphaN / 2));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainN, -mainN, Workaround_ToParserNiceString(-Complex.Conjugate(alphaN / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(mainN, -mainN, Workaround_ToParserNiceString(-Complex.Conjugate(betaN / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainN, mainN, Workaround_ToParserNiceString(betaN / 2));
-            serialized += Bifurcation.FilterFormulas.Serialize(mainM, mainM, Workaround_ToParserNiceString(alphaM / 2));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainM, -mainM, Workaround_ToParserNiceString(-Complex.Conjugate(alphaM / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(mainM, -mainM, Workaround_ToParserNiceString(-Complex.Conjugate(betaM / 2)));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainM, mainM, Workaround_ToParserNiceString(betaM / 2));*/
-            serialized += Bifurcation.FilterFormulas.Serialize(mainN, mainN, Workaround_ToParserNiceString(alphaN));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainN, mainN, Workaround_ToParserNiceString(betaN));
-            serialized += Bifurcation.FilterFormulas.Serialize(mainM, mainM, Workaround_ToParserNiceString(alphaM));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainM, mainM, Workaround_ToParserNiceString(betaM));
-
-            serialized += Bifurcation.FilterFormulas.Serialize(mainN, mainM, Workaround_ToParserNiceString(gammaNM));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainN, mainM, Workaround_ToParserNiceString(gammaNmM));
-            serialized += Bifurcation.FilterFormulas.Serialize(mainM, mainN, Workaround_ToParserNiceString(gammaMN));
-            serialized += Bifurcation.FilterFormulas.Serialize(-mainM, mainN, Workaround_ToParserNiceString(gammaMmN));
+            serialized += SerializeAlphaBeta(mainN, alphaN, betaN, true);
+            serialized += SerializeAlphaBeta(mainM, alphaM, betaM, true);
+            serialized += SerializeGammaMN(mainN, mainM, gammaNM, true);
+            serialized += SerializeGammaMN(-mainN, mainM, gammaNmM, true);
+            serialized += SerializeGammaMN(mainM, mainN, gammaMN, true);
+            serialized += SerializeGammaMN(-mainM, mainN, gammaMmN, true);
 
             bool usemN = x_mN.Magnitude > x_N.Magnitude;
             bool usemM = x_mM.Magnitude > x_M.Magnitude;
@@ -377,27 +332,14 @@ namespace Bifurcation
                 Complex g_M = D_n * (c_n(n) - d_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (a_n(n) - b_n(n) * Complex.ImaginaryOne) * 0.5;
                 Complex g_m_M = g_M / x_Mmain;
 
-                string gamma_m_N = Workaround_ToParserNiceString(g_m_N);
-                string rho1_m_N = Workaround_ToParserNiceString(0.5 * g_m_N);
-                string rho2_m_N = Workaround_ToParserNiceString(-0.5 * Complex.Conjugate(g_m_N));
-                if (g_m_N != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, columnN, rho1_m_N);
-                if (g_m_N != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, -columnN, rho2_m_N);
-
-                string gamma_m_M = Workaround_ToParserNiceString(g_m_M);
-                string rho1_m_M = Workaround_ToParserNiceString(0.5 * g_m_M);
-                string rho2_m_M = Workaround_ToParserNiceString(-0.5 * Complex.Conjugate(g_m_M));
-                if (g_m_M != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(m, columnM, rho1_m_M);
-                if (g_m_M != 0)
-                    serialized += Bifurcation.FilterFormulas.Serialize(-m, -columnM, rho2_m_M);
+                serialized += SerializeGammaMN(m, columnN, g_m_N, true);
+                serialized += SerializeGammaMN(m, columnM, g_m_M, true);
             }
 
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            InitHopfExpected(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
+            InitExpectedHopf(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
         }
 
         private void InitHopfMixed(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, int step = 1, double expAmpl = 0.125)
@@ -405,7 +347,33 @@ namespace Bifurcation
             throw new NotImplementedException();
         }
 
-        private void InitHopfExpected(double omega, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double ampl = 0.125)
+        private void InitExpectedTuring(Func<int, double> a_n, Func<int, double> b_n, int count, int step, double ampl = 0.125)
+        {
+            string expected = "chi";
+            string expPn = "";
+            for (int n = 1; n <= count; n++)
+            {
+                int m = step * n;
+                double a = ampl * a_n(n);
+                double b = ampl * b_n(n);
+
+                if (a != 0 || b != 0)
+                   expPn += " ";
+                if (a > 0)
+                    expPn += "+ ";
+                if (a != 0)
+                    expPn += $"{a} cos({m}x)";
+                if (b > 0)
+                    expPn += " + ";
+                if (b != 0)
+                    expPn += $"{b} sin({m}x)";
+
+            }
+            expected += $"+ {expPn}";
+            v.Value = expected;
+        }
+
+        private void InitExpectedHopf(double omega, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count, int step, double ampl = 0.125)
         {
             string expected = "chi";
             string expPn = "";
@@ -443,6 +411,51 @@ namespace Bifurcation
             }
             expected += "+ (" + expPn + $") * cos ({omega}t) - (" + expQn + $") * sin ({omega}t)";
             v.Value = expected;
+        }
+
+        private string SerializeAlphaBeta(int n, Complex alpha_n, Complex beta_n, bool symmetrize)
+        {
+            string res = "";
+            if (symmetrize)
+            {
+                if (alpha_n != 0)
+                {
+                    res += Bifurcation.FilterFormulas.Serialize(n, n, Workaround_ToParserNiceString(alpha_n / 2));
+                    res += Bifurcation.FilterFormulas.Serialize(-n, -n, Workaround_ToParserNiceString(-Complex.Conjugate(alpha_n / 2)));
+                }
+                if (beta_n != 0)
+                {
+                    res += Bifurcation.FilterFormulas.Serialize(-n, n, Workaround_ToParserNiceString(beta_n / 2));
+                    res += Bifurcation.FilterFormulas.Serialize(n, -n, Workaround_ToParserNiceString(-Complex.Conjugate(beta_n / 2)));
+                }
+            }
+            else
+            {
+                if (alpha_n != 0)
+                    res += Bifurcation.FilterFormulas.Serialize(n, n, Workaround_ToParserNiceString(alpha_n));
+                if (beta_n != 0)
+                    res += Bifurcation.FilterFormulas.Serialize(-n, n, Workaround_ToParserNiceString(beta_n));
+            }
+            return res;
+        }
+
+        private string SerializeGammaMN(int m, int n, Complex gamma_mn, bool symmetrize)
+        {
+            string res = "";
+            if (symmetrize)
+            {
+                if (gamma_mn != 0)
+                {
+                    res += Bifurcation.FilterFormulas.Serialize(m, n, Workaround_ToParserNiceString(gamma_mn / 2));
+                    res += Bifurcation.FilterFormulas.Serialize(-m, -n, Workaround_ToParserNiceString(-Complex.Conjugate(gamma_mn / 2)));
+                }
+            }
+            else
+            {
+                if (gamma_mn != 0)
+                    res += Bifurcation.FilterFormulas.Serialize(m, n, Workaround_ToParserNiceString(gamma_mn));
+            }
+            return res;
         }
 
         private string Workaround_ToParserNiceString(Complex c)

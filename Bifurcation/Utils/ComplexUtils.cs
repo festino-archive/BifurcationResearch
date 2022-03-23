@@ -38,21 +38,19 @@ namespace Bifurcation
             }
             return text;
         }
-        private static string DoubleToString(double d, int digits)
+        public static string DoubleToString(double d, int digits)
         {
             string res = RoundToSignificantDigits(d, digits).ToString("f" + digits);
             int dotIndex = res.IndexOf('.');
             if (dotIndex > 0)
             {
-                int index = dotIndex + 1;
-                while (index < res.Length && res[index] == '0')
-                    index++;
-                if (index == res.Length)
-                    return res.Substring(0, dotIndex);
+                int index = Math.Min(dotIndex + digits, res.Length - 1);
+                while (index > dotIndex && res[index] == '0')
+                    index--;
+                if (index == dotIndex)
+                    index--;
 
-                int zeroIndex = res.IndexOf('0', index); // 0.10999 -> 0.1, may be better use dotIndex + digits
-                if (zeroIndex > 0)
-                    return res.Substring(0, zeroIndex);
+                return res.Substring(0, index + 1);
             }
             return res;
         }

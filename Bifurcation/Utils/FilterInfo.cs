@@ -6,7 +6,7 @@ namespace Bifurcation
 {
     class FilterInfo
     {
-        public static void UpdateEigen(Filter filter, TextBlock textBlock, ModelParams param)
+        public static Tuple<Complex[], Complex[,]> UpdateEigen(Filter filter, TextBlock textBlock, ModelParams param)
         {
             var eigen = filter.GetEigenValues(param);
             Logger.Write("eigenvalues:");
@@ -61,6 +61,7 @@ namespace Bifurcation
                     textBlock.Text = text;
                 }
             }
+            return eigen;
         }
     }
 }

@@ -379,7 +379,57 @@ namespace Bifurcation
                 this.Dispatcher.Invoke(() =>
                 {
                     textBlock_Khi.Text = "𝜒 = " + curSolver.Chi.ToString("f4");
-                    FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
+                    var eigen = FilterInfo.UpdateEigen(filterBuilder.Filter, textBlock_critical, curSolver.Parameters);
+                    
+                    Complex[] eigenvalies = eigen.Item1;
+                    int k = -1;
+                    bool isTuring = false;
+                    for (int i = 0; i < eigenvalies.Length; i++)
+                    {
+                        if (eigenvalies[i].Real > 0 || Math.Abs(eigenvalies[i].Real) < 0.005)
+                        {
+                            if (eigenvalies[i].Imaginary > 0)
+                            {
+                                k = i;
+                                isTuring = false;
+                                break;
+                            }
+                            if (Math.Abs(eigenvalies[i].Imaginary) < 0.00001)
+                            {
+                                k = i;
+                                isTuring = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (k >= 0)
+                    {
+                        Complex[] eigenvector = new Complex[eigenvalies.Length];
+                        for (int i = 0; i < eigenvector.Length; i++)
+                            eigenvector[i] = eigen.Item2[i, k];
+                        int center = eigenvector.Length / 2;
+
+                        string v;
+                        if (isTuring)
+                            v = SolutionInput.GenExpectedTuring(
+                                (n) => (eigenvector[center + n] + eigenvector[center - n]).Real,
+                                (n) => -(eigenvector[center + n] - eigenvector[center - n]).Imaginary,
+                                center, true, 1);
+                        else
+                            v = SolutionInput.GenExpectedHopf(eigenvalies[k].Imaginary,
+                                (n) => (eigenvector[center + n] + eigenvector[center - n]).Real,
+                                (n) => -(eigenvector[center + n] - eigenvector[center - n]).Imaginary,
+                                (n) => (eigenvector[center + n] + eigenvector[center - n]).Imaginary,
+                                (n) => (eigenvector[center + n] - eigenvector[center - n]).Real,
+                                center, true, 1);
+
+                        foreach (UIParam param in parameters)
+                            if (param.Name == "v")
+                            {
+                                param.Text = v;
+                                break;
+                            }
+                    }
 
                     UpdateVisualization(curSolver.Solution, "u(x,T)");
                     SwitchDrawButton(false);

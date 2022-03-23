@@ -50,7 +50,7 @@ namespace Bifurcation
                 if (index == res.Length)
                     return res.Substring(0, dotIndex);
 
-                int zeroIndex = res.IndexOf('0', index);
+                int zeroIndex = res.IndexOf('0', index); // 0.10999 -> 0.1, may be better use dotIndex + digits
                 if (zeroIndex > 0)
                     return res.Substring(0, zeroIndex);
             }

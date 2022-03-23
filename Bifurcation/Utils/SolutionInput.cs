@@ -183,9 +183,9 @@ namespace Bifurcation
             u_0.Value = "chi + 0.02 cos(4x)";*/
         }
 
-        private void InitTuring(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, int step = 1, double expAmpl = 0.125)
+        private void InitTuring(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, double expAmpl = 0.125)
         {
-            int main = step;
+            int main = 1;
             K.Value = K_hat.ToString();
             double c_hat = K_hat * 1 * 1;
             int s = 1;
@@ -201,7 +201,7 @@ namespace Bifurcation
 
             for (int n = 2; n <= count; n++)
             {
-                int m = step * n;
+                int m = 1 * n;
 
                 Complex g = (1 + double.Parse(D.Value) * m * m) / (Complex.ImaginaryOne * c_hat);
                 Complex g_m = 0.5 * g * new Complex(a_n(n), -b_n(n)) / x_main;
@@ -214,12 +214,12 @@ namespace Bifurcation
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            InitExpectedTuring(a_n, b_n, count, step, expAmpl);
+            v.Value = GenExpectedTuring(a_n, b_n, count, true, expAmpl);
         }
 
-        private void InitHopfSingle(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
+        private void InitHopfSingle(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, double expAmpl = 0.125)
         {
-            int main = step;
+            int main = 1;
             K.Value = K_hat.ToString();
             double c_hat = K_hat * 1 * 1;
             int s = 1;
@@ -239,7 +239,7 @@ namespace Bifurcation
 
             for (int n = 2; n <= count; n++)
             {
-                int m = step * n;
+                int m = n;
 
                 Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / (Complex.ImaginaryOne * c_hat);
                 Complex g_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5 * g / x_main;
@@ -252,16 +252,16 @@ namespace Bifurcation
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            InitExpectedHopf(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
+            v.Value = GenExpectedHopf(omega, a_n, b_n, c_n, d_n, count, true, expAmpl);
         }
 
-        private void InitHopfDouble(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, int step = 1, double expAmpl = 0.125)
+        private void InitHopfDouble(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count = 10, double expAmpl = 0.125)
         {
             int mainN = 0;
             int mainM = 0;
             for (int i = 1; i <= count; i++)
             {
-                int n = i * step;
+                int n = i;
                 if (a_n(n) != 0 || b_n(n) != 0)
                 {
                     mainN = i;
@@ -270,7 +270,7 @@ namespace Bifurcation
             }
             for (int i = 1; i <= count; i++)
             {
-                int n = i * step;
+                int n = i;
                 if (c_n(n) != 0 || d_n(n) != 0)
                 {
                     mainM = i;
@@ -319,98 +319,123 @@ namespace Bifurcation
 
             for (int n = Math.Max(mainM, mainN) + 1; n <= count; n++)
             {
-                int m = step * n;
+                int m = n;
                 Complex x_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5;
                 Complex x_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5;
 
                 double D_n = (1 + double.Parse(D.Value) * m * m) / c_hat;
                 double omega_n = omega / c_hat;
 
-                Complex g_N = -D_n * (a_n(n) + b_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (d_n(n) + c_n(n) * Complex.ImaginaryOne) * 0.5;
+                Complex g_N = -D_n * (b_n(n) + a_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (d_n(n) + c_n(n) * Complex.ImaginaryOne) * 0.5;
                 Complex g_m_N = g_N / x_Nmain;
 
                 Complex g_M = D_n * (c_n(n) - d_n(n) * Complex.ImaginaryOne) * 0.5 + omega_n * (a_n(n) - b_n(n) * Complex.ImaginaryOne) * 0.5;
                 Complex g_m_M = g_M / x_Mmain;
 
-                serialized += SerializeGammaMN(m, columnN, g_m_N, true);
-                serialized += SerializeGammaMN(m, columnM, g_m_M, true);
+                serialized += SerializeGammaMN(m, columnN, g_m_N, false);
+                serialized += SerializeGammaMN(m, columnM, g_m_M, false);
             }
 
             FilterFormulas = serialized;
             IsFilterGrid = false;
 
-            InitExpectedHopf(omega, a_n, b_n, c_n, d_n, count, step, expAmpl);
+            v.Value = GenExpectedHopf(omega, a_n, b_n, c_n, d_n, count, true, expAmpl);
         }
 
-        private void InitHopfMixed(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, int step = 1, double expAmpl = 0.125)
+        private void InitHopfMixed(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, double expAmpl = 0.125)
         {
             throw new NotImplementedException();
         }
 
-        private void InitExpectedTuring(Func<int, double> a_n, Func<int, double> b_n, int count, int step, double ampl = 0.125)
+        public static string GenExpectedTuring(Func<int, double> a_n, Func<int, double> b_n, int count, bool round, double ampl = 0.125)
         {
             string expected = "chi";
             string expPn = "";
             for (int n = 1; n <= count; n++)
             {
-                int m = step * n;
+                int m = n;
                 double a = ampl * a_n(n);
                 double b = ampl * b_n(n);
 
-                if (a != 0 || b != 0)
+                string ser_a = SerializeDouble(a, round);
+                string ser_b = SerializeDouble(b, round);
+
+                if (Math.Abs(a) > 0.00001 || Math.Abs(b) > 0.00001)
                    expPn += " ";
-                if (a > 0)
-                    expPn += "+ ";
-                if (a != 0)
-                    expPn += $"{a} cos({m}x)";
-                if (b > 0)
-                    expPn += " + ";
-                if (b != 0)
-                    expPn += $"{b} sin({m}x)";
+                if (Math.Abs(a) > 0.00001)
+                {
+                    if (a > 0)
+                        expPn += "+ ";
+                    expPn += $"{ser_a} cos({m}x)";
+                }
+                if (Math.Abs(b) > 0.00001)
+                {
+                    if (b > 0)
+                        expPn += " + ";
+                    expPn += $"{ser_b} sin({m}x)";
+                }
 
             }
             expected += $"+ {expPn}";
-            v.Value = expected;
+            return expected;
         }
 
-        private void InitExpectedHopf(double omega, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count, int step, double ampl = 0.125)
+        public static string GenExpectedHopf(double omega, Func<int, double> a_n, Func<int, double> b_n, Func<int, double> c_n, Func<int, double> d_n, int count, bool round, double ampl = 0.125)
         {
             string expected = "chi";
             string expPn = "";
             string expQn = "";
             for (int n = 1; n <= count; n++)
             {
-                int m = step * n;
+                int m = n;
                 double a = ampl * a_n(n);
                 double b = ampl * b_n(n);
                 double c = ampl * c_n(n);
                 double d = ampl * d_n(n);
 
-                if (a != 0 || b != 0)
+                string ser_a = SerializeDouble(a, round);
+                string ser_b = SerializeDouble(b, round);
+                string ser_c = SerializeDouble(c, round);
+                string ser_d = SerializeDouble(d, round);
+
+                if (Math.Abs(a) > 0.00001 || Math.Abs(b) > 0.00001)
                     expPn += " ";
-                if (a > 0)
-                    expPn += "+ ";
-                if (a != 0)
-                    expPn += $"{a} cos({m}x)";
-                if (b > 0)
-                    expPn += " + ";
-                if (b != 0)
-                    expPn += $"{b} sin({m}x)";
+                if (Math.Abs(a) > 0.00001)
+                {
+                    if (a > 0)
+                        expPn += "+ ";
+                    expPn += $"{ser_a} cos({m}x)";
+                }
+                if (Math.Abs(b) > 0.00001)
+                {
+                    if (b > 0)
+                        expPn += " + ";
+                    expPn += $"{ser_b} sin({m}x)";
+                }
 
-                if (c != 0 || d != 0)
+                if (Math.Abs(c) > 0.00001 || Math.Abs(d) > 0.00001)
                     expQn += " ";
-                if (c > 0)
-                    expQn += "+ ";
-                if (c != 0)
-                    expQn += $"{c} cos({m}x)";
-                if (d > 0)
-                    expQn += " + ";
-                if (d != 0)
-                    expQn += $"{d} sin({m}x)";
-
+                if (Math.Abs(c) > 0.00001)
+                {
+                    if (c > 0)
+                        expQn += "+ ";
+                    expQn += $"{ser_c} cos({m}x)";
+                }
+                if (Math.Abs(d) > 0.00001)
+                {
+                    if (d > 0)
+                        expQn += " + ";
+                    expQn += $"{ser_d} sin({m}x)";
+                }
             }
-            expected += "+ (" + expPn + $") * cos ({omega}t) - (" + expQn + $") * sin ({omega}t)";
-            v.Value = expected;
+            string ser_omega = SerializeDouble(omega, round);
+            expected += $"+ ({expPn}) * cos ({ser_omega}t) - ({expQn}) * sin ({ser_omega}t)";
+            return expected;
+        }
+
+        private static string SerializeDouble(double d, bool round)
+        {
+            return round ? ComplexUtils.DoubleToString(d, 5) : d.ToString();
         }
 
         private string SerializeAlphaBeta(int n, Complex alpha_n, Complex beta_n, bool symmetrize)

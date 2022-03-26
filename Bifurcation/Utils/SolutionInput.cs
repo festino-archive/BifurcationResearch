@@ -92,14 +92,19 @@ namespace Bifurcation
             // turing halfs
             Func<int, double> f0 = (n) => 0;
             Func<int, double> f = (n) => (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
-            InitTuring(4, f, f0, new Complex(0.2, -0.2), 20, 1);*/
-
+            InitTuring(3.03, f, f0, new Complex(0.2, -0.3), 20, 1);*/
             /*
+            // turing 4 halfs
+            Func<int, double> f0 = (n) => 0;
+            Func<int, double> f = (n) => n % 4 == 0 ? (((n / 4) % 2) * (1 - 2 * ((n / 4) % 4 / 2)) / (double)(n / 4)) : 0;
+            InitTuring(3.03, f, f0, new Complex(0.2, -0.3), 80, 1);*/
+
+            
             // hopf blinking halfs
             Func<int, double> f0 = (n) => 0;
             Func<int, double> fn0 = (n) => n == 1 ? 0.1 : 0;
             Func<int, double> f = (n) => (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
-            InitHopf(4, f, f0, f0, fn0, 20, 1);*/
+            InitHopfSingle(4, f, f0, f0, fn0, 20);
 
             /*
             // central peaks
@@ -138,7 +143,7 @@ namespace Bifurcation
             Func<int, double> c = (n) => 0.8 * 2 * (n % 2) / (double)(n * n);
             a = (n) => 0.5 * 2 * (n % 2) / (double)(n * n);
             c = (n) => (n == 1 ? -0.1 : 0) + 2 * (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
-            InitHopf(4, a, f0, c, fn0, 20);*/
+            InitHopfSingle(4, a, f0, c, fn0, 20);*/
 
             /*
             // Blinking triangles
@@ -166,14 +171,14 @@ namespace Bifurcation
             InitHopfDouble(2, a, f0, c, f0, 4);
             K.Value = "2.1";
             u_0.Value = "chi + 0.1 cos(2x)";*/
-            
+            /*
             // cosining cosines - cos(t + 2.4048256 cos(2x))
             Func<int, double> f0 = (n) => 0;
             Func<int, double> a = (n) => n == 4 ? -0.432 : (n == 8 ? 0.065 : (n == 12 ? -0.003 : 0));
             Func<int, double> c = (n) => n == 2 ? -0.519 : (n == 6 ? 0.199 : (n == 10 ? -0.016 : 0));
             InitHopfDouble(2, a, f0, c, f0, 12);
             K.Value = "2.01";
-            u_0.Value = "chi + 0.1 cos(4x)";
+            u_0.Value = "chi + 0.1 cos(4x)";*/
 
             /*Func<int, double> f0 = (n) => 0;
             Func<int, double> a = (n) => n == 2 ? -0.1 : (n == 6 ? 1 : 0);
@@ -186,20 +191,28 @@ namespace Bifurcation
         private void InitTuring(double K_hat, Func<int, double> a_n, Func<int, double> b_n, Complex beta, int count = 10, double expAmpl = 0.125)
         {
             int main = 1;
+            for (int i = 1; i <= count; i++)
+            {
+                if (a_n(i) != 0 || b_n(i) != 0)
+                {
+                    main = i;
+                    break;
+                }
+            }
+
             K.Value = K_hat.ToString();
             double c_hat = K_hat * 1 * 1;
-            int s = 1;
-            Complex x_N = new Complex(a_n(s), -b_n(s));
-            Complex x_mN = new Complex(a_n(s), b_n(s));
+            Complex x_N = new Complex(a_n(main), -b_n(main));
+            Complex x_mN = new Complex(a_n(main), b_n(main));
             Complex alpha = x_mN / x_N * Complex.Conjugate(beta) - (1 + double.Parse(D.Value) * main * main) / c_hat * Complex.ImaginaryOne;
             string serialized = "";
-            serialized += SerializeAlphaBeta(main, alpha, beta, true);
+            serialized += SerializeAlphaBeta(main, alpha, beta, false);
 
             bool useN = x_N.Magnitude > x_mN.Magnitude;
             int column = useN ? main : -main;
             Complex x_main = useN ? x_N : x_mN;
 
-            for (int n = 2; n <= count; n++)
+            for (int n = main + 1; n <= count; n++)
             {
                 int m = 1 * n;
 
@@ -241,12 +254,23 @@ namespace Bifurcation
             {
                 int m = n;
 
-                Complex g = (1 + double.Parse(D.Value) * m * m + Complex.ImaginaryOne * omega) / (Complex.ImaginaryOne * c_hat);
-                Complex g_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5 * g / x_main;
-                Complex g_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5 * g / x_main;
+                double D_n = (1 + double.Parse(D.Value) * m * m ) / c_hat;
+                double omega_n = omega / c_hat;
+                Complex x_m = new Complex(a_n(n) + d_n(n), c_n(n) - b_n(n)) * 0.5;
+                Complex x_mm = new Complex(a_n(n) - d_n(n), c_n(n) + b_n(n)) * 0.5;
+                Complex kNN_p = (x_N + x_mN) / (x_N - x_mN);
+                Complex kNm_p = (x_m + x_mm) / (x_N - x_mN);
+                Complex kNN_n = (x_N - x_mN) / (x_N + x_mN);
+                Complex kNm_n = (x_m - x_mm) / (x_N + x_mN);
+                double re_sub = 1 / kNN_p.Real * (D_n * (kNN_p.Real * kNm_p.Imaginary - kNN_p.Imaginary * kNm_p.Real)
+                    + omega_n * (kNN_p.Real * kNm_p.Real + kNN_p.Imaginary * kNm_p.Imaginary));
+                double im_sum = 1 / kNN_p.Real * (-D_n * kNm_p.Real + omega_n * kNm_p.Imaginary);
+                double re_sum = 1 / kNN_n.Real * (D_n * (kNN_n.Real * kNm_n.Imaginary - kNN_n.Imaginary * kNm_n.Real)
+                    + omega_n * (kNN_n.Real * kNm_n.Real + kNN_n.Imaginary * kNm_n.Imaginary));
+                double im_sub = 1 / kNN_n.Real * (-D_n * kNm_n.Real + omega_n * kNm_n.Imaginary);
 
-                serialized += SerializeGammaMN(m, column, g_m, false);
-                serialized += SerializeGammaMN(-m, column, g_mm, false);
+                serialized += SerializeGammaMN(m, column, new Complex(re_sum + re_sub, im_sum + im_sub) * 0.5, false);
+                serialized += SerializeGammaMN(m, -column, new Complex(re_sum - re_sub, im_sum - im_sub) * 0.5, false);
             }
 
             FilterFormulas = serialized;

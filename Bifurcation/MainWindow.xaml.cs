@@ -369,7 +369,7 @@ namespace Bifurcation
             var calcProgress = new Progress<double>(value => calcBar.Value = value);
             ShowProgress();
 
-            Task.Run(() =>
+            await Task.Factory.StartNew(() =>
             {
                 AsyncArg asyncArg = new AsyncArg(calcProgress, solveCancellation.Token);
                 curSolver.Solve(method, asyncArg);
@@ -388,16 +388,16 @@ namespace Bifurcation
                     {
                         if (eigenvalies[i].Real > 0 || Math.Abs(eigenvalies[i].Real) < 0.005)
                         {
-                            if (eigenvalies[i].Imaginary > 0)
-                            {
-                                k = i;
-                                isTuring = false;
-                                break;
-                            }
                             if (Math.Abs(eigenvalies[i].Imaginary) < 0.00001)
                             {
                                 k = i;
                                 isTuring = true;
+                                break;
+                            }
+                            if (eigenvalies[i].Imaginary > 0)
+                            {
+                                k = i;
+                                isTuring = false;
                                 break;
                             }
                         }
@@ -429,6 +429,102 @@ namespace Bifurcation
                                 param.Text = v;
                                 break;
                             }
+
+                        if (isTuring)
+                        {
+                            double mu1, mu2, s1, s2;
+                            {
+                                string eigenfunction = v + " - chi";
+                                IExpression expr = MainParser.Parse(eigenfunction);
+                                string[] deps = MainParser.GetDependencies(expr);
+                                double[] ef = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, curSolver.XSize);
+                                var Phi_ef = filterBuilder.Filter.Apply_v(curSolver.XSize, ef);
+                                double[] ef2 = new double[ef.Length];
+                                for (int i = 0; i < ef.Length; i++)
+                                    ef2[i] = ef[i] * ef[i];
+                                var Phi_ef2 = filterBuilder.Filter.Apply_v(curSolver.XSize, ef2);
+
+                                double[] phiHat = new double[ef.Length];
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    phiHat[i] = Phi_ef[i].Magnitude * Phi_ef[i].Magnitude - Phi_ef2[i].Real;
+                                double dotProd1 = 0;
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    dotProd1 += phiHat[i] * ef[i] * 1 / phiHat.Length;
+                                mu1 = -curSolver.K * curSolver.A0m2 * dotProd1;
+                                mu1 = curSolver.K * curSolver.A0m2 * dotProd1;
+                            }
+                            /*{
+                                string eigenfunction = v + " - chi";
+                                IExpression expr = MainParser.Parse(eigenfunction);
+                                string[] deps = MainParser.GetDependencies(expr);
+                                double[] ef = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, curSolver.XSize);
+
+                                // z1 = L~_0 ([Phi1] / [L1 e_n] L1 e_n - Phi1) ...
+                                double[] z1 = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, curSolver.XSize);
+
+                                var Phi_ef = filterBuilder.Filter.Apply_v(curSolver.XSize, ef);
+                                var Phi_z1 = filterBuilder.Filter.Apply_v(curSolver.XSize, ef);
+
+                                double[] efz1 = new double[ef.Length];
+                                for (int i = 0; i < ef.Length; i++)
+                                    efz1[i] = ef[i] * z1[i];
+                                var Phi_efz1 = filterBuilder.Filter.Apply_v(curSolver.XSize, efz1);
+
+                                double[] phiHat = new double[ef.Length];
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    phiHat[i] = Phi_ef[i].Magnitude * Phi_ef[i].Magnitude - Phi_efz1[i].Real;
+                                double dotProd1 = 0;
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    dotProd1 += phiHat[i] * ef[i] * 1 / phiHat.Length;
+                                s1 = dotProd1;
+                            }
+                            {
+                                string eigenfunction = v + " - chi";
+                                IExpression expr = MainParser.Parse(eigenfunction);
+                                string[] deps = MainParser.GetDependencies(expr);
+                                double[] ef = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, curSolver.XSize);
+                                var Phi_ef = filterBuilder.Filter.Apply_v(curSolver.XSize, ef);
+                                double[] ef2 = new double[ef.Length];
+                                for (int i = 0; i < ef.Length; i++)
+                                    ef2[i] = ef[i] * ef[i];
+                                var Phi_ef2 = filterBuilder.Filter.Apply_v(curSolver.XSize, ef2);
+
+                                double[] phiHat = new double[ef.Length];
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    phiHat[i] = Phi_ef[i].Magnitude * Phi_ef[i].Magnitude - Phi_ef2[i].Real;
+                                double dotProd1 = 0;
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    dotProd1 += phiHat[i] * ef[i] * 1 / phiHat.Length;
+                                double dotProd2 = 1;
+                                mu2 = -curSolver.K * curSolver.A0m2 * dotProd1 / dotProd2;
+                            }
+                            {
+                                string eigenfunction = v + " - chi";
+                                IExpression expr = MainParser.Parse(eigenfunction);
+                                string[] deps = MainParser.GetDependencies(expr);
+                                double[] ef = MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, curSolver.XSize);
+                                var Phi_ef = filterBuilder.Filter.Apply_v(curSolver.XSize, ef);
+                                double[] ef2 = new double[ef.Length];
+                                for (int i = 0; i < ef.Length; i++)
+                                    ef2[i] = ef[i] * ef[i];
+                                var Phi_ef2 = filterBuilder.Filter.Apply_v(curSolver.XSize, ef2);
+
+                                double[] phiHat = new double[ef.Length];
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    phiHat[i] = Phi_ef[i].Magnitude * Phi_ef[i].Magnitude - Phi_ef2[i].Real;
+                                double dotProd1 = 0;
+                                for (int i = 0; i < phiHat.Length; i++)
+                                    dotProd1 += phiHat[i] * ef[i] * 1 / phiHat.Length;
+                                double dotProd2 = 1;
+                                s2 = -curSolver.K * curSolver.A0m2 * dotProd1 / dotProd2;
+                            }*/
+
+
+                            textBlock_Khi.Text = "phi1 = " + mu1.ToString("f4");/* + " "
+                                + "phi2 = " + mu2.ToString("f4") + " "
+                                + "phi3 = " + s1.ToString("f4") + " "
+                                + "phi4 = " + s2.ToString("f4") + " ";*/
+                        }
                     }
 
                     UpdateVisualization(curSolver.Solution, "u(x,T)");

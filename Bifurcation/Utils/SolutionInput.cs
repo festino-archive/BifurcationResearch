@@ -88,12 +88,14 @@ namespace Bifurcation
             }
             v.Value = expected;*/
 
-            
+
             // turing halfs
             Func<int, double> f0 = (n) => 0;
             //Func<int, double> f1 = (n) => 1.0 / (1 + n * n);
             Func<int, double> f = (n) => (n % 2) * (1 - 2 * (n % 4 / 2)) / (double)(n);
-            InitTuring(3.03, f, f0, new Complex(0.2, -0.3), 20, 1);/**/
+            InitTuring(3.03, f, f0, new Complex(0.2, -0.3), 20, 1);
+            T.Value = "50";
+            K.Value = "3.2";/**/
             /*
             // turing halfs 2
             Func<int, double> f0 = (n) => 0;

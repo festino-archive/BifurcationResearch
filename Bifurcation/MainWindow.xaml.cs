@@ -354,6 +354,23 @@ namespace Bifurcation
             });
         }
 
+        private double[] GetExpectedProfile(string vStr)
+        {
+            SolutionInput input = BuildInput();
+            IExpression expr = MainParser.Parse(vStr);
+            string[] deps = MainParser.GetDependencies(expr);
+            double T = double.Parse(input.T);
+            ExprSimplifier.Substitute(expr, "t", new ExprConst(T.ToString("f15")));
+            int N = int.Parse(input.x_count);
+            if (N > VISUALIZATION_WIDTH)
+                N = VISUALIZATION_WIDTH;
+
+            if (Dependencies.Get(MathAliases.ConvertName("chi")) == null)
+                Dependencies.Set(MathAliases.ConvertName("chi"), 0);
+
+            return MainParser.EvalArrayD(expr, Dependencies, deps, "x", 2 * Math.PI, N);
+        }
+
         private async void drawButton_ClickAsync(object sender, RoutedEventArgs e)
         {
             if (solveCancellation != null)
@@ -423,6 +440,7 @@ namespace Bifurcation
                                 (n) => (eigenvector[center + n] - eigenvector[center - n]).Real,
                                 center, true, 1);
 
+                        v = RescaleExpectedSolution(v, curSolver.Solution);
                         foreach (UIParam param in parameters)
                             if (param.Name == "v")
                             {
@@ -533,6 +551,47 @@ namespace Bifurcation
             });
         }
 
+        private string RescaleExpectedSolution(string v, double[,] solution)
+        {
+            double maxValue = 0;
+            int maxValueIndex = 0;
+            for (int j = 0; j < solution.GetLength(1); j++)
+            {
+                double value = solution[solution.GetLength(0) - 1, j];
+                if (value > maxValue)
+                {
+                    maxValueIndex = j;
+                    maxValue = value;
+                }
+            }
+            double[] expectedSolution = GetExpectedProfile(v);
+            double maxValue2 = 0;
+            int maxValueIndex2 = 0;
+            for (int j = 0; j < expectedSolution.Length; j++)
+            {
+                double value = expectedSolution[j];
+                if (value > maxValue2)
+                {
+                    maxValueIndex2 = j;
+                    maxValue2 = value;
+                }
+            }
+            double amplCoef = (maxValue - curSolver.Chi) / (maxValue2 - curSolver.Chi);
+            if (maxValueIndex != maxValueIndex2)
+            {
+                if (Math.Abs(maxValueIndex - maxValueIndex2) > 10)
+                {
+                    amplCoef *= -1;
+                }
+                else
+                {
+                    string deltaPhiStr = "2pi*(" + (maxValueIndex2 - maxValueIndex) + "/" + expectedSolution.Length + ")";
+                    v = v.Replace("x", "(x + " + deltaPhiStr + ")");
+                }
+            }
+            return v.Substring(0, 3) + " + " + amplCoef.ToString("f10") + "(" + v.Substring(3) + ")";
+        }
+
         private void BuildSolver()
         {
             SolutionInput input = BuildInput();
@@ -597,7 +656,77 @@ namespace Bifurcation
             UpdateVisSizes();
             visContainer.Visibility = Visibility.Visible;
 
+            SavePlotAndProfiles(solution);
+
             RunPlotWindow(GetLastLayer(solution), name);
+        }
+
+        private void SavePlotAndProfiles(double[,] solution)
+        {
+            string extension = ".txt";
+            string xLength = "2*pi";
+            string name = DateTime.Now.ToString("yyyy'-'MM'-'dd'_'HH'-'mm'-'ss");
+            SolutionInput input = BuildInput();
+            save2D(name + extension, input.T, xLength, solution);
+            double[] solutionProfile = new double[solution.GetLength(1)];
+            for (int i = 0; i < solutionProfile.Length; i++)
+            {
+                solutionProfile[i] = solution[solution.GetLength(0) - 1, i];
+            }
+            double[] expectedProfile = GetExpectedProfile(input.v);
+            save1D(name + "_profiles" + extension, xLength, "u(x, T)", solutionProfile, "U(x, t)", expectedProfile);
+        }
+
+        private void save1D(string filename, string xLength, string p1Name, double[] p1, string p2Name, double[] p2)
+        {
+            using (StreamWriter writer = new StreamWriter(filename))
+            {
+                int size = p1.Length;
+                writer.WriteLine("1D");
+                writer.WriteLine(size + " " + xLength + " x");
+                writer.WriteLine("u");
+                writer.WriteLine(p1Name);
+                writer.WriteLine("#00FF00");
+                string line = "";
+                for (int i = 0; i < size; i++)
+                {
+                    if (line.Length > 0)
+                        line += " ";
+                    line += p1[i];
+                }
+                writer.WriteLine(line);
+                writer.WriteLine(p2Name);
+                writer.WriteLine("#0000FF");
+                line = "";
+                for (int i = 0; i < size; i++)
+                {
+                    if (line.Length > 0)
+                        line += " ";
+                    line += p2[i];
+                }
+                writer.WriteLine(line);
+            }
+        }
+
+        private void save2D(string filename, string tLength, string xLength, double[,] data)
+        {
+            using (StreamWriter writer = new StreamWriter(filename))
+            {
+                writer.WriteLine("2D");
+                writer.WriteLine(data.GetLength(0) + " " + tLength + " T");
+                writer.WriteLine(data.GetLength(1) + " " + xLength + " x");
+                for (int j = 0; j < data.GetLength(1); j++)
+                {
+                    string line = "";
+                    for (int i = 0; i < data.GetLength(0); i++)
+                    {
+                        if (line.Length > 0)
+                            line += " ";
+                        line += data[i, j];
+                    }
+                    writer.WriteLine(line);
+                }
+            }
         }
 
         private double[] GetLastLayer(double[,] solution)
